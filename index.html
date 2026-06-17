@@ -1,0 +1,2734 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monthly Atomization - Worker Timesheet</title>
+    <meta name="description"
+        content="Monthly worker timesheet data collection and management system with Google Sheets integration">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        /* ===== CSS RESET & VARIABLES ===== */
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #f0f2f5;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #f8f9fb;
+            --bg-card: #ffffff;
+            --bg-input: #f5f6f8;
+            --bg-hover: #eef0f4;
+            --bg-header-row: #e8edf4;
+            --accent-primary: #4361ee;
+            --accent-secondary: #3a56d4;
+            --accent-glow: rgba(67, 97, 238, 0.15);
+            --accent-green: #10b981;
+            --accent-green-glow: rgba(16, 185, 129, 0.15);
+            --accent-red: #ef4444;
+            --accent-orange: #f59e0b;
+            --accent-cyan: #0891b2;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-muted: #94a3b8;
+            --text-accent: #4361ee;
+            --border-color: #e2e8f0;
+            --border-focus: #4361ee;
+            --border-subtle: #f1f5f9;
+            --cell-bg: #ffffff;
+            --cell-bg-alt: #f8fafc;
+            --cell-bg-readonly: #f1f5f9;
+            --cell-border: #e2e8f0;
+            --cell-focus: #4361ee;
+            --row-hover: rgba(67, 97, 238, 0.04);
+            --header-bg: linear-gradient(135deg, #4361ee, #3a56d4);
+            --footer-bg: linear-gradient(135deg, #eef2ff, #e0e7ff);
+            --sunday-bg: #fef2f2;
+            --sunday-border: #fecaca;
+            --saturday-bg: #fffbeb;
+            --saturday-border: #fde68a;
+            --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+            --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.03);
+            --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.06), 0 4px 10px rgba(0, 0, 0, 0.04);
+            --shadow-xl: 0 20px 40px rgba(0, 0, 0, 0.08);
+            --shadow-glow: 0 0 16px var(--accent-glow);
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 20px;
+            --transition-fast: 0.15s ease;
+            --transition-normal: 0.25s ease;
+            --transition-slow: 0.4s ease;
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        html {
+            font-size: 14px;
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            transition: background-color var(--transition-normal);
+        }
+
+        body.admin-active {
+            --bg-primary: #d188b1;
+            --accent-primary: #a64477;
+            --accent-secondary: #8a3360;
+            --accent-glow: rgba(166, 68, 119, 0.2);
+            --text-accent: #a64477;
+            --border-focus: #a64477;
+            --cell-focus: #a64477;
+            background-color: var(--bg-primary) !important;
+            transition: all var(--transition-normal);
+        }
+
+        body.admin-active #welcomeGreeting {
+            color: white !important;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        body.admin-active .welcome-text p {
+            color: rgba(255, 255, 255, 0.9) !important;
+        }
+
+        body.admin-active .current-timestamp {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            backdrop-filter: blur(4px);
+        }
+
+        /* ===== SCROLLBAR ===== */
+        ::-webkit-scrollbar {
+            width: 7px;
+            height: 7px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* ===== LOADING OVERLAY ===== */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 20000;
+            transition: opacity var(--transition-normal);
+        }
+
+        .loading-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loading-spinner {
+            text-align: center;
+        }
+
+        .spinner {
+            width: 44px;
+            height: 44px;
+            margin: 0 auto 16px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--accent-primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .loading-spinner p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        /* ===== TOAST NOTIFICATION ===== */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 22px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-lg);
+            z-index: 20001;
+            transform: translateX(120%);
+            transition: transform var(--transition-normal);
+            max-width: 400px;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast.hidden {
+            display: flex;
+        }
+
+        .toast-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.85rem;
+            flex-shrink: 0;
+        }
+
+        .toast.success .toast-icon {
+            background: var(--accent-green-glow);
+            color: var(--accent-green);
+        }
+
+        .toast.error .toast-icon {
+            background: rgba(239, 68, 68, 0.12);
+            color: var(--accent-red);
+        }
+
+        .toast.info .toast-icon {
+            background: var(--accent-glow);
+            color: var(--accent-primary);
+        }
+
+        .toast-message {
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        /* ===== HEADER ===== */
+        .header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 16px 32px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .header-content {
+            max-width: 1800px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-img {
+            width: 48px;
+            height: 48px;
+            object-fit: contain;
+        }
+
+        .title-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            line-height: 1.2;
+        }
+
+        .company-name {
+            font-size: 1.25rem;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+        }
+
+        .app-subtitle {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+            margin-top: 2px;
+        }
+
+        /* ===== HOME SECTION / DASHBOARD ===== */
+        .home-section {
+            padding: 40px 32px;
+            max-width: 1200px;
+            margin: 0 auto;
+            animation: fadeInUp 0.6s ease;
+        }
+
+        .welcome-banner {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 1.5px solid var(--border-color);
+        }
+
+        .welcome-text h2 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            letter-spacing: -0.03em;
+        }
+
+        .welcome-text p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            margin-top: 4px;
+        }
+
+        .current-timestamp {
+            font-weight: 600;
+            color: var(--accent-primary);
+            font-size: 0.95rem;
+            background: var(--accent-glow);
+            padding: 8px 16px;
+            border-radius: 100px;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 30px;
+        }
+
+        .dashboard-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-xl);
+            padding: 30px;
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .card-icon {
+            width: 42px;
+            height: 42px;
+            background: var(--bg-input);
+            color: var(--accent-primary);
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .card-header h3 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        /* Mode Options */
+        .mode-selector {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .mode-option {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 20px;
+            border: 2px solid var(--bg-input);
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            text-align: left;
+            transition: all var(--transition-normal);
+        }
+
+        .mode-option:hover {
+            border-color: var(--accent-glow);
+            background: var(--bg-secondary);
+        }
+
+        .mode-option.active {
+            border-color: var(--accent-primary);
+            background: var(--accent-glow);
+        }
+
+        .option-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--bg-card);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: var(--text-muted);
+            box-shadow: var(--shadow-sm);
+            transition: all var(--transition-normal);
+        }
+
+        .mode-option.active .option-icon {
+            background: var(--accent-primary);
+            color: white;
+        }
+
+        .option-text strong {
+            display: block;
+            font-size: 1.05rem;
+            color: var(--text-primary);
+        }
+
+        .option-text span {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        /* Selection Grid */
+        .selection-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .selection-grid .form-group:nth-child(2) {
+            grid-column: 2;
+        }
+
+        .selection-grid .form-group:nth-child(n+3) {
+            grid-column: span 1;
+        }
+
+        .btn-primary-lg {
+            margin-top: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 18px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: white;
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all var(--transition-normal);
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-primary-lg:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px var(--accent-glow);
+        }
+
+        /* Specific Row Highlight for Day Wise & Focus */
+        .spreadsheet tbody tr.row-highlight,
+        .spreadsheet tbody tr:focus-within {
+            background: var(--accent-glow) !important;
+        }
+
+        .spreadsheet tbody tr:focus-within td {
+            border-top: 1px solid var(--accent-primary);
+            border-bottom: 1px solid var(--accent-primary);
+        }
+
+        .spreadsheet tbody tr:focus-within td:first-child {
+            border-left: 2px solid var(--accent-primary);
+        }
+
+        .spreadsheet tbody tr:focus-within td:last-child {
+            border-right: 2px solid var(--accent-primary);
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-group label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .form-group input,
+        .form-group select {
+            padding: 11px 14px;
+            background: var(--bg-input);
+            border: 1.5px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-family: var(--font-family);
+            font-size: 0.92rem;
+            font-weight: 500;
+            transition: all var(--transition-fast);
+            outline: none;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            border-color: var(--border-focus);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+            background: #fff;
+        }
+
+        /* ===== FULLSCREEN BUTTON ===== */
+        .btn-fullscreen {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-input);
+            border: 1.5px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+
+        .btn-fullscreen:hover {
+            background: var(--accent-primary);
+            color: white;
+            border-color: var(--accent-primary);
+        }
+
+        /* ===== FULLSCREEN MODE ===== */
+        .timesheet-section.fullscreen-mode {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 9999;
+            background: var(--bg-primary);
+            padding: 12px 16px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .timesheet-section.fullscreen-mode .spreadsheet-wrapper {
+            max-width: 100%;
+            border-radius: 0;
+            flex: 1;
+            height: auto;
+        }
+
+        .timesheet-section.fullscreen-mode .spreadsheet-container {
+            max-height: 100%;
+            height: 100%;
+        }
+
+        /* ===== TIMESHEET SECTION ===== */
+        .timesheet-section {
+            padding: 20px 24px 40px;
+        }
+
+        .timesheet-section.hidden {
+            display: none;
+        }
+
+        .timesheet-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            max-width: 1800px;
+            margin-left: auto;
+            margin-right: auto;
+            width: 100%;
+        }
+
+        .btn-back {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 20px;
+            background: #ffffff;
+            color: #4361ee;
+            border: 1.5px solid var(--border-color);
+            border-radius: 100px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 0.95rem;
+            transition: all var(--transition-fast);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .btn-back:hover {
+            background: var(--bg-hover);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-submit {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 22px;
+            background: #10b981;
+            color: white;
+            border: none;
+            border-radius: 100px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+        }
+
+        .btn-submit:hover {
+            background: #059669;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 15px rgba(16, 185, 129, 0.3);
+        }
+
+        /* ===== TIMESHEET HEADER REDESIGN ===== */
+        .timesheet-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 20px;
+            background: #ffffff;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 0;
+            max-width: 100%;
+            gap: 10px;
+        }
+
+        .header-section-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex: 1;
+        }
+
+        .header-section-center {
+            text-align: center;
+            flex: 2;
+        }
+
+        .header-section-center h2 {
+            font-size: 1rem;
+            font-weight: 800;
+            color: #1e293b;
+            margin: 0;
+            letter-spacing: -0.01em;
+            text-transform: uppercase;
+        }
+
+        .header-section-center p {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            margin: 1px 0 0;
+            font-weight: 600;
+        }
+
+        .header-section-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex: 1;
+            justify-content: flex-end;
+        }
+
+        .zoom-control-pill {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: white;
+            padding: 6px 16px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .zoom-btn {
+            background: none;
+            border: none;
+            color: #4361ee;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            padding: 0 4px;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #zoomSliderInput {
+            width: 120px;
+            height: 6px;
+            appearance: none;
+            background: #e2e8f0;
+            border-radius: 100px;
+            outline: none;
+        }
+
+        #zoomSliderInput::-webkit-slider-thumb {
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: #64748b;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 3px solid white;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+        }
+
+        .zoom-value {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            min-width: 40px;
+            text-align: right;
+        }
+
+        .btn-icon-only {
+            width: 38px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+
+        .btn-icon-only:hover {
+            background: var(--bg-hover);
+            color: var(--accent-primary);
+            border-color: var(--accent-primary);
+        }
+
+        /* ===== SPREADSHEET ===== */
+        .spreadsheet-wrapper {
+            max-width: 1800px;
+            margin: 0 auto;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+            background: var(--bg-card);
+        }
+
+        .spreadsheet-container {
+            overflow: auto;
+            max-height: calc(100vh - 200px);
+        }
+
+        .spreadsheet {
+            width: max-content;
+            border-collapse: collapse;
+            table-layout: fixed;
+            min-width: 100%;
+        }
+
+        /* Column widths */
+        .col-sno {
+            width: 50px;
+        }
+
+        .col-name {
+            width: 150px;
+        }
+
+        .col-date {
+            width: 110px;
+        }
+
+        .col-day {
+            width: 110px;
+        }
+
+        .col-time {
+            width: 100px;
+        }
+
+        .col-time-wide {
+            width: 130px;
+        }
+
+        .col-location {
+            width: 150px;
+        }
+
+        .col-number {
+            width: 90px;
+        }
+
+        .col-number-wide {
+            width: 140px;
+        }
+
+        .col-money {
+            width: 110px;
+        }
+
+        .col-remarks {
+            width: 250px;
+        }
+
+        .spreadsheet thead {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: var(--header-bg);
+        }
+
+        .spreadsheet th {
+            padding: 10px 6px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: #ffffff;
+            text-transform: uppercase;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .spreadsheet td {
+            padding: 0;
+            border: 1px solid var(--cell-border);
+            height: 33px;
+            vertical-align: middle;
+        }
+
+        .spreadsheet td.locked {
+            background-color: var(--cell-bg-readonly);
+            cursor: not-allowed;
+        }
+
+        .spreadsheet td.locked input {
+            pointer-events: none;
+        }
+
+        .spreadsheet tbody tr {
+            background: var(--cell-bg);
+        }
+
+        .spreadsheet tbody tr:nth-child(even) {
+            background: var(--cell-bg-alt);
+        }
+
+        .spreadsheet tbody tr:hover {
+            background: var(--row-hover);
+        }
+
+        .spreadsheet tbody tr.row-sunday {
+            background: var(--sunday-bg);
+        }
+
+        .spreadsheet tbody tr.row-saturday {
+            background: var(--saturday-bg);
+        }
+
+        .spreadsheet td input,
+        .spreadsheet td select {
+            width: 100%;
+            height: 100%;
+            padding: 4px 6px;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-size: 0.82rem;
+            text-align: center;
+            outline: none;
+        }
+
+        .spreadsheet td input:focus,
+        .spreadsheet td select:focus {
+            background: rgba(67, 97, 238, 0.1) !important;
+            box-shadow: inset 0 0 0 2px var(--cell-focus) !important;
+        }
+
+        .spreadsheet tfoot {
+            position: sticky;
+            bottom: 0;
+            z-index: 10;
+            background: var(--footer-bg);
+        }
+
+        .spreadsheet tfoot td {
+            padding: 11px 8px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--accent-primary);
+            text-align: center;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 24px;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            border-top: 1px solid var(--border-color);
+            background: var(--bg-secondary);
+        }
+
+        .admin-login-link {
+            display: block;
+            text-align: center;
+            margin-top: 15px;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            text-decoration: none;
+            cursor: pointer;
+            transition: color var(--transition-fast);
+        }
+
+        .admin-login-link:hover {
+            color: var(--accent-primary);
+        }
+
+        /* Status Modal */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity var(--transition-normal);
+        }
+
+        .modal.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-content {
+            background: var(--bg-card);
+            padding: 30px;
+            border-radius: var(--radius-lg);
+            width: 90%;
+            max-width: 600px;
+            box-shadow: var(--shadow-xl);
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        /* ===== PASSWWORD TOGGLE ===== */
+        .password-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .password-container input {
+            width: 100%;
+            padding-right: 40px !important;
+        }
+
+        .toggle-password {
+            position: absolute;
+            right: 12px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            transition: color var(--transition-fast);
+            z-index: 5;
+        }
+
+        .toggle-password:hover {
+            color: var(--accent-primary);
+        }
+
+        .toggle-password svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* ===== CUSTOM DROPDOWN ===== */
+        .dropdown-wrapper {
+            position: relative;
+        }
+
+        .custom-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            box-shadow: var(--shadow-lg);
+            z-index: 1000;
+            max-height: 250px;
+            overflow-y: auto;
+            display: none;
+            margin-top: 4px;
+        }
+
+        .custom-dropdown.show {
+            display: block;
+        }
+
+        .dropdown-item {
+            padding: 10px 14px;
+            cursor: pointer;
+            transition: background var(--transition-fast);
+            font-size: 0.92rem;
+            color: var(--text-primary);
+        }
+
+        .dropdown-item:hover {
+            background: var(--bg-input);
+            color: var(--accent-primary);
+        }
+
+        .dropdown-item.no-results {
+            color: var(--text-muted);
+            font-style: italic;
+            cursor: default;
+        }
+
+        .dropdown-item.no-results:hover {
+            background: transparent;
+        }
+
+        /* ===== RESPONSIVE STYLES ===== */
+        @media (max-width: 1024px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .home-section {
+                padding: 20px 16px;
+            }
+
+            .header {
+                padding: 12px 16px;
+            }
+
+            .welcome-banner {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+
+            .spreadsheet {
+                min-width: 1500px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            html {
+                font-size: 13px;
+            }
+
+            .selection-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .selection-grid .form-group:nth-child(2) {
+                grid-column: 1;
+            }
+
+            .nav-tabs {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: var(--bg-secondary);
+                padding: 10px;
+                border-top: 1px solid var(--border-color);
+                justify-content: space-around;
+                z-index: 1000;
+            }
+
+            .header-content {
+                justify-content: center;
+            }
+
+            .nav-tabs .nav-btn {
+                flex: 1;
+                text-align: center;
+                padding: 12px 5px;
+                font-size: 0.8rem;
+            }
+
+            #currentDateTime {
+                display: none;
+            }
+
+            .home-section {
+                padding-bottom: 80px;
+            }
+
+            .footer {
+                padding-bottom: 100px;
+            }
+
+            .modal-content {
+                width: 95%;
+                padding: 20px;
+            }
+
+            .timesheet-header {
+                flex-direction: column;
+                gap: 15px;
+                align-items: stretch;
+            }
+
+            .timesheet-actions {
+                justify-content: space-between;
+            }
+
+            .btn-back,
+            .btn-submit {
+                padding: 10px 12px;
+                font-size: 0.85rem;
+            }
+
+            .timesheet-bottom-controls {
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 15px;
+            }
+
+            .timesheet-bottom-controls .timesheet-actions {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .timesheet-bottom-controls .zoom-controls {
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .logo-section {
+                flex-direction: row;
+                gap: 8px;
+            }
+
+            .company-name {
+                font-size: 1.1rem;
+            }
+
+            .app-subtitle {
+                font-size: 0.75rem;
+            }
+
+            .welcome-text h2 {
+                font-size: 1.8rem;
+            }
+        }
+
+        /* ===== RESTORED STYLES ===== */
+        .status-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .status-table th,
+        .status-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.9rem;
+        }
+
+        .badge {
+            padding: 4px 10px;
+            border-radius: 100px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .badge-pending {
+            background: #f1f5f9;
+            color: #64748b;
+        }
+
+        .badge-submitted {
+            background: var(--accent-glow);
+            color: var(--accent-primary);
+        }
+
+        .badge-verified {
+            background: var(--accent-green-glow);
+            color: var(--accent-green);
+        }
+
+        .admin-verify-box {
+            background: var(--bg-tertiary);
+            padding: 15px;
+            border-radius: var(--radius-md);
+            margin-bottom: 15px;
+            border: 1px solid var(--border-color);
+            display: none;
+            max-width: 1800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .admin-verify-box.show {
+            display: block;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 10px;
+        }
+
+        .nav-btn {
+            padding: 8px 16px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-color);
+            background: var(--bg-secondary);
+            cursor: pointer;
+            font-weight: 600;
+            transition: all var(--transition-fast);
+        }
+
+        .nav-btn.active {
+            background: var(--accent-primary);
+            color: white;
+            border-color: var(--accent-primary);
+        }
+
+        /* ===== VERTICAL ENTRY MODE (DAY WISE) ===== */
+        .vertical-mode .timesheet-header {
+            display: none !important;
+        }
+
+        .vertical-day-header {
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px 32px;
+            background: #ffffff;
+            margin-bottom: 20px;
+        }
+
+        .vertical-mode .vertical-day-header {
+            display: flex;
+        }
+
+        .vertical-mode-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 15px;
+            padding: 20px;
+            background: #f8f9fb;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border-color);
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .vertical-field-card {
+            background: #ffffff;
+            padding: 12px 15px;
+            border-radius: 8px;
+            border: 1.5px solid #e2e8f0;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+            transition: all 0.2s ease;
+            grid-column: span 1;
+        }
+
+        .vertical-field-card:focus-within {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .vertical-field-card label {
+            display: block;
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            margin-bottom: 8px;
+        }
+
+        .vertical-field-card input {
+            width: 100%;
+            padding: 8px 0;
+            border: none;
+            background: #f8fafc;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #1e293b;
+            text-align: center;
+            outline: none;
+        }
+
+        .vertical-info-banner {
+            grid-column: 1 / -1;
+            display: flex;
+            gap: 40px;
+            background: #4361ee;
+            color: white;
+            padding: 12px 25px;
+            border-radius: 8px;
+            margin-bottom: 5px;
+        }
+
+        .vertical-info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .vertical-info-item span:first-child {
+            font-size: 0.6rem;
+            opacity: 0.9;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        .vertical-info-item span:last-child {
+            font-size: 0.9rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .vertical-submit-container {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+            padding-bottom: 10px;
+        }
+
+        @media (max-width: 1200px) {
+            .vertical-mode-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .vertical-mode-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="loadingOverlay" class="loading-overlay hidden">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p id="loadingText">Loading data...</p>
+        </div>
+    </div>
+    <div id="toast" class="toast hidden">
+        <div class="toast-icon" id="toastIcon">✓</div>
+        <div class="toast-message" id="toastMessage"></div>
+    </div>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo-section">
+                <img src="logo.jpg" alt="Logo" class="logo-img">
+                <div class="title-container">
+                    <div class="company-name"><span style="color: #4361ee;">MASTER</span><span
+                            style="color: #ef4444;">SCAN</span></div>
+                    <div class="app-subtitle">Salary Timesheet Submission (STS)</div>
+                </div>
+            </div>
+            <div class="current-timestamp" id="currentDateTime"></div>
+            <div class="nav-tabs">
+                <button class="nav-btn active" onclick="showSection('home')">Home</button>
+                <button class="nav-btn" id="btnAdminNav" onclick="toggleAdminLogin()">Admin Portal</button>
+                <button class="nav-btn" onclick="showStatusModal()">Submission Status</button>
+            </div>
+        </div>
+    </header>
+    <section class="home-section" id="homeSection">
+        <div class="home-container">
+            <div class="welcome-banner">
+                <div class="welcome-text">
+                    <h2 id="welcomeGreeting">Welcome back!</h2>
+                    <p>Select your entry mode to get started.</p>
+                </div>
+                <div class="current-timestamp" id="currentDateTime"></div>
+            </div>
+            <div class="dashboard-grid">
+                <div class="dashboard-card main-card">
+                    <div class="card-header">
+                        <div class="card-icon">⚡</div>
+                        <h3>Entry Mode</h3>
+                    </div>
+                    <div class="mode-selector">
+                        <button id="btnModeMonth" class="mode-option active" onclick="setEntryMode('month')">
+                            <div class="option-icon">M</div><strong>Month Wise</strong>
+                        </button>
+                        <button id="btnModeDay" class="mode-option" onclick="setEntryMode('day')">
+                            <div class="option-icon">D</div><strong>Day Wise</strong>
+                        </button>
+                    </div>
+                    <a class="admin-login-link" onclick="toggleAdminLogin()">Login as Administrator</a>
+                </div>
+                <div class="dashboard-card form-card">
+                    <div class="card-header">
+                        <div class="card-icon">👤</div>
+                        <h3>Worker Selection</h3>
+                    </div>
+                    <div class="selection-grid">
+                        <div class="form-group"><label>Department</label>
+                            <select id="departmentSelect" onchange="loadWorkerList()">
+                                <option value="">Select Department</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label>Worker Full Name</label>
+                            <div class="dropdown-wrapper">
+                                <input type="text" id="workerSelect" placeholder="Click to choose worker..."
+                                    autocomplete="off" onfocus="showCustomWorkerList()"
+                                    oninput="filterCustomWorkerList()">
+                                <div id="customWorkerDropdown" class="custom-dropdown"></div>
+                            </div>
+                        </div>
+                        <div class="form-group" id="workerPasswordGroup"><label>Worker Password</label>
+                            <div class="password-container">
+                                <input type="password" id="workerPassword" placeholder="Enter your password">
+                                <button type="button" class="toggle-password"
+                                    onclick="togglePasswordVisibility('workerPassword')">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                        <circle cx="12" cy="12" r="3"></circle>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div style="text-align: right; margin-top: -4px;">
+                                <a href="javascript:void(0)" onclick="openChangePasswordModal()"
+                                    style="font-size: 0.75rem; color: var(--accent-primary); text-decoration: none; font-weight: 600;">Change
+                                    Password?</a>
+                                <span style="font-size: 0.75rem; color: var(--text-muted); margin: 0 4px;">|</span>
+                                <a href="javascript:void(0)" onclick="handleForgotPassword('worker')"
+                                    style="font-size: 0.75rem; color: var(--accent-primary); text-decoration: none; font-weight: 600;">Forgot
+                                    Password?</a>
+                            </div>
+                        </div>
+                        <div class="form-group" id="dateGroup" style="display:none;"><label>Select Date</label><input
+                                type="date" id="dateSelect"></div>
+                        <div class="form-group" id="monthGroup"><label>Month</label><select id="monthSelect">
+                                <option value="January">January</option>
+                                <option value="February">February</option>
+                                <option value="March">March</option>
+                                <option value="April">April</option>
+                                <option value="May">May</option>
+                                <option value="June">June</option>
+                                <option value="July">July</option>
+                                <option value="August">August</option>
+                                <option value="September">September</option>
+                                <option value="October">October</option>
+                                <option value="November">November</option>
+                                <option value="December">December</option>
+                            </select></div>
+                        <div class="form-group" id="yearGroup"><label>Year</label>
+                            <input type="number" id="yearSelect" min="1900" max="3000" placeholder="Year">
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 10px; margin-top: auto;">
+                        <button class="btn-primary-lg" style="flex: 1;" id="btnContinue" onclick="loadTimesheet()">Open
+                            Portal</button>
+                        <button class="btn-primary-lg"
+                            style="flex: 0 0 120px; background: var(--bg-header-row); color: var(--text-primary); border: 1px solid var(--border-color);"
+                            onclick="showStatusModal()">Status</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Admin Login Modal -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <h3>Admin Login</h3>
+            <p style="margin-bottom: 20px; color: var(--text-secondary);">Access restricted area</p>
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label>User ID</label>
+                <input type="text" id="adminId" placeholder="Masterscan">
+            </div>
+            <div class="form-group" style="margin-bottom: 25px;">
+                <label>Password</label>
+                <div class="password-container">
+                    <input type="password" id="adminPassword" placeholder="••••••••">
+                    <button type="button" class="toggle-password" onclick="togglePasswordVisibility('adminPassword')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                    </button>
+                </div>
+                <div style="text-align: right; margin-top: 4px;">
+                    <a href="javascript:void(0)" onclick="openAdminChangePasswordModal()"
+                        style="font-size: 0.75rem; color: var(--accent-primary); text-decoration: none; font-weight: 600;">Change
+                        Password?</a>
+                    <span style="font-size: 0.75rem; color: var(--text-muted); margin: 0 4px;">|</span>
+                    <a href="javascript:void(0)" onclick="handleForgotPassword('admin')"
+                        style="font-size: 0.75rem; color: var(--accent-primary); text-decoration: none; font-weight: 600;">Forgot
+                        Password?</a>
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn-back" style="flex:1" onclick="closeModal('loginModal')">Cancel</button>
+                <button class="btn-submit" style="flex:1" onclick="handleAdminLogin()">Login</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div id="changePasswordModal" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <h3>Change Password</h3>
+            <p style="margin-bottom: 20px; color: var(--text-secondary);">Update your timesheet password</p>
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label>Old Password</label>
+                <div class="password-container">
+                    <input type="password" id="cpOldPassword" placeholder="Enter old password">
+                    <button type="button" class="toggle-password" onclick="togglePasswordVisibility('cpOldPassword')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label>New Password</label>
+                <div class="password-container">
+                    <input type="password" id="cpNewPassword" placeholder="Enter new password">
+                    <button type="button" class="toggle-password" onclick="togglePasswordVisibility('cpNewPassword')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div class="form-group" style="margin-bottom: 25px;">
+                <label>Confirm New Password</label>
+                <div class="password-container">
+                    <input type="password" id="cpConfirmPassword" placeholder="Confirm new password">
+                    <button type="button" class="toggle-password"
+                        onclick="togglePasswordVisibility('cpConfirmPassword')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn-back" style="flex:1" onclick="closeModal('changePasswordModal')">Cancel</button>
+                <button class="btn-submit" style="flex:1" onclick="submitPasswordChange()">Update</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Modal -->
+    <div id="statusModal" class="modal">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+                <div>
+                    <h3>Submission Status</h3>
+                    <p id="statusSubtitle" style="color: var(--text-secondary); font-size: 0.9rem;"></p>
+                </div>
+                <button class="btn-back" onclick="closeModal('statusModal')">Close</button>
+            </div>
+            <div id="statusListContent">
+                <!-- Status table injected here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Exit Confirmation Modal (Save & Exit) -->
+    <div id="exitConfirmModal" class="modal">
+        <div class="modal-content" style="max-width: 450px; text-align: left; padding: 40px;">
+            <p
+                style="margin-bottom: 12px; font-weight: 500; font-size: 1.2rem; color: #1e293b; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+                Click 'OK' to Save and Exit.</p>
+            <p
+                style="margin-bottom: 35px; font-weight: 500; font-size: 1.2rem; color: #1e293b; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+                Click 'Cancel' to Exit WITHOUT saving.</p>
+            <div style="display: flex; justify-content: flex-end; gap: 20px;">
+                <button id="btnExitSave"
+                    style="background: #0056b3; color: white; border: 3px solid #0056b3; padding: 12px 35px; min-width: 110px; border-radius: 50px; font-size: 1.1rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; outline: 3px solid white; outline-offset: -6px;">OK</button>
+                <button id="btnExitNoSave"
+                    style="background: #e0ecfe; color: #000; border: none; padding: 12px 35px; min-width: 110px; border-radius: 50px; font-size: 1.1rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center;">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Logout Modal -->
+    <div id="logoutModal" class="modal">
+        <div class="modal-content" style="max-width: 400px; text-align: center;">
+            <h3 style="margin-bottom: 10px;">Admin Actions</h3>
+            <p style="margin-bottom: 25px; color: var(--text-secondary);">What would you like to do?</p>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button class="btn-back" style="flex:1" onclick="closeModal('logoutModal')">Cancel</button>
+                <button class="btn-submit" style="flex:1; background: var(--accent-red);"
+                    onclick="performLogout()">Logout</button>
+            </div>
+        </div>
+    </div>
+
+    <section class="timesheet-section hidden" id="timesheetSection">
+        <div class="timesheet-header">
+            <div class="header-section-left">
+                <button class="btn-back" onclick="goBack()" style="padding: 5px 12px; font-size: 0.82rem;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="19" y1="12" x2="5" y2="12"></line>
+                        <polyline points="12 19 5 12 12 5"></polyline>
+                    </svg>
+                    Back
+                </button>
+                <button class="btn-submit" id="btnHeaderSubmit" onclick="submitTimesheet()"
+                    style="padding: 5px 15px; font-size: 0.82rem;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                        <polyline points="7 3 7 8 15 8"></polyline>
+                    </svg>
+                    Submit & Save
+                </button>
+                <button class="btn-submit" id="btnHeaderPrint" onclick="exportToExcel()"
+                    style="padding: 5px 15px; font-size: 0.82rem; background-color: #10b981; border-color: #10b981; margin-left: 8px;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Print Excel
+                </button>
+            </div>
+
+            <!-- Center Info -->
+            <div class="header-section-center">
+                <h2 id="timesheetTitle">ADHIMOOLAM GANESH's Timesheet</h2>
+                <p id="timesheetSubtitle">Dept 1 · March 2026</p>
+            </div>
+
+            <!-- Right Side Controls -->
+            <div class="header-section-right">
+                <div class="zoom-control-pill" style="padding: 3px 10px;">
+                    <button class="zoom-btn" onclick="zoomOut()" style="font-size: 1rem;">&minus;</button>
+                    <input type="range" id="zoomSliderInput" min="50" max="150" value="100" step="10"
+                        oninput="applyZoom()" style="width: 80px; height: 4px;">
+                    <button class="zoom-btn" onclick="zoomIn()" style="font-size: 1rem;">&plus;</button>
+                    <span class="zoom-value" id="zoomText" style="font-size: 0.75rem; min-width: 32px;">100%</span>
+                </div>
+                <button class="btn-icon-only" onclick="toggleFullscreen()" id="btnFullscreen" title="Toggle Fullscreen"
+                    style="width: 30px; height: 30px;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                        stroke-linecap="round" stroke-linejoin="round" id="fullscreenIcon">
+                        <polyline points="4 14 4 20 10 20"></polyline>
+                        <polyline points="20 10 20 4 14 4"></polyline>
+                        <line x1="14" y1="10" x2="21" y2="3"></line>
+                        <line x1="3" y1="21" x2="10" y2="14"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Admin Verification Row -->
+        <div id="btnHeaderVerify"
+            style="display: none; width: 100%; justify-content: center; padding: 10px 0 5px; background: #ffffff;">
+            <div
+                style="display: flex; align-items: center; background: #008ba3; border-radius: 100px; padding: 3px; overflow: hidden; box-shadow: 0 3px 10px rgba(0, 139, 163, 0.15); border: 1px solid rgba(255,255,255,0.1);">
+                <input type="text" id="headerVerifierName" placeholder="Verifier Name"
+                    style="border: none; outline: none; background: white; font-size: 0.82rem; font-weight: 600; color: #1e293b; width: 130px; padding: 6px 12px; border-radius: 100px; margin-right: 4px;">
+                <button onclick="handleVerify()"
+                    style="background: transparent; border: none; color: white; padding: 6px 18px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; white-space: nowrap; font-size: 0.88rem;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                    Approve & Lock
+                </button>
+            </div>
+        </div>
+
+        <div id="verticalDayHeader" class="vertical-day-header">
+            <button class="btn-back" onclick="goBack()" style="padding: 7px 18px; font-size: 0.85rem;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                Back
+            </button>
+            <div class="header-section-center"
+                style="border: 1px solid #e2e8f0; padding: 10px 30px; background: #f1f5f9; border-radius: 4px;">
+                <h2 id="verticalTimesheetTitle">ADHIMOOLAM GANESH's Timesheet</h2>
+                <p id="verticalTimesheetSubtitle">Dept 1 · March 2026</p>
+            </div>
+            <div style="width: 100px;"></div> <!-- Spacer -->
+        </div>
+
+        <div class="spreadsheet-wrapper">
+            <div class="spreadsheet-container">
+                <table class="spreadsheet" id="spreadsheetTable">
+                    <thead></thead>
+                    <tbody id="spreadsheetBody"></tbody>
+                    <tfoot id="spreadsheetFoot"></tfoot>
+                </table>
+                <div id="dayWiseForm" class="vertical-mode-grid" style="display:none;"></div>
+            </div>
+        </div>
+
+        <!-- Bottom controls moved to header -->
+    </section>
+    <footer class="footer">
+        <p>&copy; 2026 Monthly Atomization · MASTERSCAN Data System</p>
+    </footer>
+
+    <script>
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyyAfDeE-dM6fRXXH3VkKti6Qux2aO-E4oYroaoyMgNiRNXEuJhg7PcobO7NfGhnohItw/exec';
+        let currentWorker = '', currentMonth = '', currentYear = '', currentData = [], daysInMonth = 0, entryMode = 'month', isAdmin = false, masterWorkerList = {}, masterAdmins = [], currentDepartment = '', isLocked = false, selectedDayOnly = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            setDefaultMonthYear();
+            updateClock();
+            setInterval(updateClock, 60000);
+            refreshWorkerListFromMaster();
+
+            // Set up exit modal handlers
+            document.getElementById('btnExitSave').onclick = async () => {
+                closeModal('exitConfirmModal');
+                await submitTimesheet();
+                exitTimesheet();
+            };
+            document.getElementById('btnExitNoSave').onclick = () => {
+                closeModal('exitConfirmModal');
+                exitTimesheet();
+            };
+        });
+
+        function updateClock() { const now = new Date(); const clockEl = document.getElementById('currentDateTime'); if (clockEl) clockEl.textContent = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }); }
+
+        function setDefaultMonthYear() { const now = new Date(); const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']; document.getElementById('monthSelect').value = months[now.getMonth()]; document.getElementById('yearSelect').value = now.getFullYear(); document.getElementById('dateSelect').valueAsDate = now; }
+
+        function setEntryMode(mode) {
+            entryMode = mode;
+            document.getElementById('btnModeDay').classList.toggle('active', mode === 'day');
+            document.getElementById('btnModeMonth').classList.toggle('active', mode === 'month');
+            document.getElementById('dateGroup').style.display = mode === 'day' ? 'flex' : 'none';
+            document.getElementById('monthGroup').style.display = mode === 'month' ? 'flex' : 'none';
+            document.getElementById('yearGroup').style.display = mode === 'month' ? 'flex' : 'none';
+        }
+
+        function getDaysInMonth(m, y) { return new Date(y, getMonthIndex(m) + 1, 0).getDate(); }
+        function getDayName(d) { return ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'][d.getDay()]; }
+        function getMonthIndex(m) { return ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].indexOf(m); }
+        function formatDate(d, m, y) { return `${String(d).padStart(2, '0')}/${String(getMonthIndex(m) + 1).padStart(2, '0')}/${y}`; }
+
+        function showLoading(txt) { document.getElementById('loadingText').textContent = txt || 'Loading...'; document.getElementById('loadingOverlay').classList.remove('hidden'); }
+        function hideLoading() { document.getElementById('loadingOverlay').classList.add('hidden'); }
+        function showToast(msg, type = 'success') { const toast = document.getElementById('toast'), tMsg = document.getElementById('toastMessage'), tIco = document.getElementById('toastIcon'); tMsg.textContent = msg; toast.className = `toast ${type}`; tIco.textContent = type === 'success' ? '✓' : '✗'; setTimeout(() => toast.classList.add('show'), 10); setTimeout(() => toast.classList.remove('show'), 4000); }
+
+        function showSection(id) {
+            document.getElementById('homeSection').style.display = id === 'home' ? 'block' : 'none';
+            document.getElementById('timesheetSection').classList.toggle('hidden', id !== 'timesheet');
+        }
+
+        async function refreshWorkerListFromMaster() {
+            try {
+                const res = await fetch(`${SCRIPT_URL}?action=getWorkerList`).then(r => r.json());
+                if (res.status === 'success') {
+                    masterWorkerList = res.data;
+                    masterAdmins = res.admins || [];
+
+                    // Dynamically populate department dropdown
+                    const deptSelect = document.getElementById('departmentSelect');
+                    const currentVal = deptSelect.value;
+                    deptSelect.innerHTML = '<option value="">Select Department</option>';
+                    Object.keys(masterWorkerList).forEach(dept => {
+                        const opt = document.createElement('option');
+                        opt.value = dept;
+                        opt.textContent = dept;
+                        deptSelect.appendChild(opt);
+                    });
+                    if (currentVal) deptSelect.value = currentVal;
+
+                    loadWorkerList();
+                }
+            } catch (e) { console.error('Master list fetch failed', e); }
+        }
+
+        function loadWorkerList() {
+            const dept = document.getElementById('departmentSelect').value;
+            const input = document.getElementById('workerSelect');
+            const dropdown = document.getElementById('customWorkerDropdown');
+            input.value = '';
+            dropdown.innerHTML = '';
+            dropdown.classList.remove('show');
+            if (dept && masterWorkerList[dept]) {
+                filterCustomWorkerList();
+            }
+        }
+
+        function togglePasswordVisibility(id) {
+            const el = document.getElementById(id);
+            const btn = el.nextElementSibling;
+            if (el.type === 'password') {
+                el.type = 'text';
+                btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>';
+            } else {
+                el.type = 'password';
+                btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
+            }
+        }
+
+        function showCustomWorkerList() {
+            const dept = document.getElementById('departmentSelect').value;
+            if (!dept) {
+                showToast('Select Department first', 'info');
+                return;
+            }
+            filterCustomWorkerList();
+            document.getElementById('customWorkerDropdown').classList.add('show');
+        }
+
+        function filterCustomWorkerList() {
+            const dept = document.getElementById('departmentSelect').value;
+            const inputVal = document.getElementById('workerSelect').value.toLowerCase();
+            const dropdown = document.getElementById('customWorkerDropdown');
+            dropdown.innerHTML = '';
+
+            if (dept && masterWorkerList[dept]) {
+                const filtered = masterWorkerList[dept].filter(worker => {
+                    const wName = typeof worker === 'string' ? worker : worker.name;
+                    return wName.toLowerCase().includes(inputVal);
+                });
+
+                if (filtered.length > 0) {
+                    filtered.forEach(worker => {
+                        const wName = typeof worker === 'string' ? worker : worker.name;
+                        const div = document.createElement('div');
+                        div.className = 'dropdown-item';
+                        div.textContent = wName;
+                        div.onclick = () => selectWorker(wName);
+                        dropdown.appendChild(div);
+                    });
+                } else {
+                    const div = document.createElement('div');
+                    div.className = 'dropdown-item no-results';
+                    div.textContent = 'No matching workers';
+                    dropdown.appendChild(div);
+                }
+            }
+        }
+
+        function selectWorker(name) {
+            document.getElementById('workerSelect').value = name;
+            document.getElementById('customWorkerDropdown').classList.remove('show');
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.dropdown-wrapper')) {
+                const dropdown = document.getElementById('customWorkerDropdown');
+                if (dropdown) dropdown.classList.remove('show');
+            }
+        });
+
+        function toggleAdminLogin() {
+            if (isAdmin) {
+                // If already admin, clicking should just logout immediately
+                performLogout();
+            } else {
+                document.getElementById('loginModal').classList.add('show');
+            }
+        }
+
+        function performLogout() {
+            isAdmin = false;
+            document.body.classList.remove('admin-active');
+
+            // Clean up UI instantly
+            document.getElementById('btnAdminNav').textContent = 'Admin Portal';
+            document.getElementById('welcomeGreeting').textContent = 'Welcome back!';
+            document.getElementById('workerPasswordGroup').style.display = 'flex';
+            document.getElementById('workerPassword').value = '';
+
+            const loginLink = document.querySelector('.admin-login-link');
+            if (loginLink) loginLink.textContent = 'Login as Administrator';
+
+            // Hide admin verification panels
+            document.getElementById('btnAdminVerify').style.display = 'none';
+            document.getElementById('btnHeaderVerify').style.display = 'none';
+
+            // Close the modal instantly
+            closeModal('logoutModal');
+
+            // Exit any active timesheet view
+            exitTimesheet();
+
+            showToast('Logged out, closing session...');
+
+            // Attempt to close the tab
+            setTimeout(() => {
+                window.close();
+                // Fallback for browsers that block window.close()
+                if (!window.closed) {
+                    window.location.href = "about:blank";
+                }
+            }, 300);
+        }
+
+        function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+        function handleAdminLogin() {
+            const id = document.getElementById('adminId').value;
+            const pw = document.getElementById('adminPassword').value;
+
+            const admin = masterAdmins.find(a => a.name === id);
+            if (admin && admin.password === pw) {
+                isAdmin = true;
+                document.body.classList.add('admin-active');
+                closeModal('loginModal');
+                document.getElementById('btnAdminNav').textContent = 'Admin Portal Logout';
+                document.getElementById('welcomeGreeting').textContent = 'Admin Portal Active';
+                document.getElementById('workerPasswordGroup').style.display = 'none';
+                const loginLink = document.querySelector('.admin-login-link');
+                if (loginLink) loginLink.textContent = 'Logout Administrator';
+                showToast('Welcome Administrator!');
+            } else {
+                showToast('Invalid credentials', 'error');
+            }
+        }
+
+        async function showStatusModal() {
+            const dept = document.getElementById('departmentSelect').value;
+            const mon = document.getElementById('monthSelect').value;
+            const yr = document.getElementById('yearSelect').value;
+            if (!dept) { showToast('Select Department first', 'error'); return; }
+
+            showLoading('Fetching status...');
+            document.getElementById('statusSubtitle').textContent = `${dept} · ${mon} ${yr}`;
+            try {
+                const res = await fetch(`${SCRIPT_URL}?action=getStatus&department=${encodeURIComponent(dept)}&monthYear=${encodeURIComponent(mon + ' ' + yr)}`).then(r => r.json());
+                hideLoading();
+                if (res.status === 'success') {
+                    let html = '<table class="status-table"><thead><tr><th>Worker Name</th><th>Status</th><th>Action</th></tr></thead><tbody>';
+                    res.data.forEach(item => {
+                        const badgeClass = `badge-${item.status.toLowerCase()}`;
+                        let actions = '-';
+                        if (isAdmin && (item.status === 'Submitted' || item.status === 'Verified')) {
+                            actions = `<div style="display: flex; gap: 5px; justify-content: flex-start;"><button onclick="viewWorkerFromStatus('${item.name}')" style="background:var(--accent-primary); color:white; border:none; padding:4px 8px; border-radius:4px; font-size:0.8rem; cursor:pointer;">View</button>`;
+                            if (item.status === 'Verified') {
+                                actions += `<button onclick="handleResubmit('${item.name}')" style="background:var(--accent-orange); color:white; border:none; padding:4px 8px; border-radius:4px; font-size:0.8rem; cursor:pointer;">Resubmit</button>`;
+                            }
+                            actions += `</div>`;
+                        }
+                        html += `<tr><td>${item.name}</td><td><span class="badge ${badgeClass}">${item.status}</span></td><td>${actions}</td></tr>`;
+                    });
+                    html += '</tbody></table>';
+                    document.getElementById('statusListContent').innerHTML = html;
+                    document.getElementById('statusModal').classList.add('show');
+                }
+            } catch (e) { hideLoading(); showToast('Error fetching status', 'error'); }
+        }
+
+        function viewWorkerFromStatus(name) {
+            document.getElementById('workerSelect').value = name;
+            closeModal('statusModal');
+            loadTimesheet();
+        }
+
+        async function handleResubmit(name) {
+            if (!confirm(`Allow ${name} to edit their timesheet again?`)) return;
+            showLoading('Unlocking...');
+            const dept = document.getElementById('departmentSelect').value;
+            const mon = document.getElementById('monthSelect').value;
+            const yr = document.getElementById('yearSelect').value;
+            try {
+                const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'resubmitWorker', department: dept, monthYear: mon + ' ' + yr, workerName: name }) }).then(r => r.json());
+                hideLoading(); showToast(res.message); showStatusModal();
+            } catch (e) { hideLoading(); showToast('Error', 'error'); }
+        }
+
+        async function loadTimesheet() {
+            const dept = document.getElementById('departmentSelect').value;
+            const workerInput = document.getElementById('workerSelect');
+            const name = workerInput.value.trim();
+            const mon = document.getElementById('monthSelect').value;
+            const yr = document.getElementById('yearSelect').value;
+
+            if (!dept || !name) { showToast('Select department and worker', 'error'); return; }
+
+            if (!isAdmin) {
+                const workerList = masterWorkerList[dept] || [];
+                const workerObj = workerList.find(w => (typeof w === 'string' ? w : w.name) === name);
+                if (!workerObj) {
+                    showToast('Invalid worker name', 'error');
+                    return;
+                }
+                const expectedPwd = typeof workerObj === 'string' ? '' : (workerObj.password || '');
+                const enteredPwd = document.getElementById('workerPassword').value;
+                if (expectedPwd && expectedPwd.trim() !== '') {
+                    if (enteredPwd !== expectedPwd) {
+                        showToast('Incorrect worker password', 'error');
+                        return;
+                    }
+                }
+            }
+
+            if (entryMode === 'day') {
+                const dVal = document.getElementById('dateSelect').value;
+                if (!dVal) { showToast('Select date', 'error'); return; }
+                const sDate = new Date(dVal);
+                currentMonth = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][sDate.getMonth()];
+                currentYear = sDate.getFullYear().toString();
+                selectedDayOnly = sDate.getDate();
+            } else {
+                currentMonth = mon; currentYear = yr; selectedDayOnly = null;
+            }
+
+            currentDepartment = dept; currentWorker = name; daysInMonth = getDaysInMonth(currentMonth, currentYear);
+
+            showLoading('Loading...');
+            try {
+                const activeCols = DEPARTMENTS_CONFIG[dept] || DEPARTMENTS_CONFIG['DEFAULT'];
+                const keys = ['name', 'date', 'day', ...activeCols.map(c => c.id)].join(',');
+                const sheetName = `${name}-${currentMonth}-${currentYear}`;
+                const url = `${SCRIPT_URL}?action=getData&department=${encodeURIComponent(dept)}&monthYear=${encodeURIComponent(currentMonth + ' ' + currentYear)}&sheetName=${encodeURIComponent(sheetName)}&keys=${encodeURIComponent(keys)}`;
+                const res = await fetch(url).then(r => r.json());
+
+                isLocked = res.isLocked || false;
+                currentData = res.data || [];
+                buildSpreadsheet(currentData);
+
+                const btnSubmit = document.getElementById('btnHeaderSubmit');
+                const btnVerify = document.getElementById('btnHeaderVerify');
+                if (btnSubmit) btnSubmit.style.display = isLocked ? 'none' : 'block';
+                if (btnVerify) btnVerify.style.display = (isAdmin && !isLocked) ? 'flex' : 'none';
+
+                showSection('timesheet');
+                document.getElementById('timesheetTitle').textContent = `${name}'s Timesheet`;
+                document.getElementById('timesheetSubtitle').textContent = `${dept} · ${currentMonth} ${currentYear} ${isLocked ? '(LOCKED)' : ''}`;
+                document.getElementById('verticalTimesheetTitle').textContent = `${name}'s Timesheet`;
+                document.getElementById('verticalTimesheetSubtitle').textContent = `${dept} · ${currentMonth} ${currentYear} ${isLocked ? '(LOCKED)' : ''}`;
+                hideLoading();
+            } catch (e) { hideLoading(); showSection('timesheet'); buildSpreadsheet(null); }
+        }
+
+        const DEPARTMENTS_CONFIG = {
+            'RADIOGRAPHY': [
+                { id: 'nightShiftIn', label: 'IN', topLabel: 'NIGHT SHIFT', type: 'time', width: 'col-time-wide' },
+                { id: 'nightShiftOut', label: 'OUT', topLabel: 'NIGHT SHIFT', type: 'time', width: 'col-time-wide' },
+                { id: 'lunchIn', label: 'IN', topLabel: 'LUNCH TIME', type: 'time', width: 'col-time-wide' },
+                { id: 'lunchOut', label: 'OUT', topLabel: 'LUNCH TIME', type: 'time', width: 'col-time-wide' },
+                { id: 'standBy', label: 'STAND BY', topLabel: 'STAND BY', type: 'text', width: 'col-location' },
+                { id: 'lunchRtClient', label: 'CLIENT', topLabel: 'LUNCH RT', type: 'text', width: 'col-location' },
+                { id: 'lunchRtFilms', label: 'FILMS', topLabel: 'LUNCH RT', type: 'text', width: 'col-location' },
+                { id: 'tsNumber', label: 'TIMESHEET NUMBER', topLabel: 'TIMESHEET NUMBER', type: 'text', width: 'col-number-wide' },
+                { id: 'loc1Client1', label: 'CLIENT 01', topLabel: 'LOCATION 01', type: 'text', width: 'col-location' },
+                { id: 'loc1Films', label: 'FILMS', topLabel: 'LOCATION 01', type: 'text', width: 'col-location' },
+                { id: 'loc2Client2', label: 'CLIENT 02', topLabel: 'LOCATION 02', type: 'text', width: 'col-location' },
+                { id: 'loc2Films', label: 'FILMS', topLabel: 'LOCATION 02', type: 'text', width: 'col-location' },
+                { id: 'loc3Client3', label: 'CLIENT 03', topLabel: 'LOCATION 03', type: 'text', width: 'col-location' },
+                { id: 'loc3Films', label: 'FILMS', topLabel: 'LOCATION 03', type: 'text', width: 'col-location' },
+                { id: 'expF4x10', label: '4"X10"', topLabel: 'EXPOSED FILMS', type: 'number', width: 'col-number', sum: true },
+                { id: 'expF4x15', label: '4"X15"', topLabel: 'EXPOSED FILMS', type: 'number', width: 'col-number', sum: true },
+                { id: 'expF17x14', label: '17"X14"', topLabel: 'EXPOSED FILMS', type: 'number', width: 'col-number', sum: true },
+                { id: 'expFReshoot', label: 'RESHOOT', topLabel: 'EXPOSED FILMS', type: 'number', width: 'col-number', sum: true },
+                { id: 'expFTotal', label: 'TOTAL', topLabel: 'EXPOSED FILMS', type: 'number', width: 'col-number', sum: true },
+                { id: 'otLunchRt', label: 'LUNCH RT', topLabel: 'OT DETAILS', type: 'number', width: 'col-number', sum: true },
+                { id: 'otSiteToSite', label: 'SITE TO SITE', topLabel: 'OT DETAILS', type: 'number', width: 'col-number', sum: true },
+                { id: 'otXrayScar', label: 'X-RAY / SCAR', topLabel: 'OT DETAILS', type: 'number', width: 'col-number', sum: true },
+                { id: 'otProfile', label: 'PROFILE (MIN 4FILM)', topLabel: 'OT DETAILS', type: 'number', width: 'col-number-wide', sum: true },
+                { id: 'timesheetOt', label: 'Timesheet OT', topLabel: 'OT DETAILS', type: 'number', width: 'col-number', sum: true },
+                { id: 'sunday', label: 'SUNDAY', topLabel: 'OT DETAILS', type: 'number', width: 'col-number', sum: true },
+                { id: 'totalOt', label: 'TOTAL OT', topLabel: 'OT DETAILS', type: 'number', width: 'col-number', sum: true },
+                { id: 'otRtrDrtPautAllow', label: 'RTR/DRT/PAUT ALLOW', topLabel: 'OT DETAILS', type: 'number', width: 'col-number-wide', sum: true },
+                { id: 'otRopeAllow', label: 'ROPE ALLOW', topLabel: 'OT DETAILS', type: 'number', width: 'col-number-wide', sum: true },
+                { id: 'otWeldtestAllow', label: 'WELDTEST ALLOW', topLabel: 'OT DETAILS', type: 'number', width: 'col-number-wide', sum: true },
+                { id: 'busFarw', label: 'BUS FARE', topLabel: 'BUS FARE', type: 'number', width: 'col-number', sum: true }
+            ],
+            'DEFAULT': [
+                { id: 'clientIn', label: 'Client IN', type: 'time', width: 'col-time-wide' },
+                { id: 'clientOut', label: 'Client OUT', type: 'time', width: 'col-time-wide' },
+                { id: 'tsNumber', label: 'Timesheet Number', type: 'text', width: 'col-number-wide' },
+                { id: 'siteLoc1', label: 'Site Location 1', type: 'text', width: 'col-location' },
+                { id: 'siteLoc2', label: 'Site Location 2', type: 'text', width: 'col-location' },
+                { id: 'otHrs', label: 'OT Hrs', type: 'number', width: 'col-number', step: '0.5', sum: true },
+                { id: 'siteAllowanceHrs', label: 'Site Allowance Hrs', type: 'number', width: 'col-number-wide', step: '0.5', sum: true },
+                { id: 'travelAllowance', label: 'Travel Allowance', type: 'number', width: 'col-money', step: '0.01', sum: true, prefix: '$' },
+                { id: 'otherAllowance', label: 'Other Allowance', type: 'number', width: 'col-money', step: '0.01', sum: true, prefix: '$' },
+                { id: 'busAllowance', label: 'Bus Allowance', type: 'number', width: 'col-money', step: '0.01', sum: true, prefix: '$' },
+                { id: 'remarks', label: 'Remarks', type: 'text', width: 'col-remarks', countTimesheets: true }
+            ]
+        };
+
+        function getActiveColumns() {
+            return DEPARTMENTS_CONFIG[currentDepartment] || DEPARTMENTS_CONFIG['DEFAULT'];
+        }
+
+        function buildSpreadsheet(data) {
+            const activeCols = getActiveColumns();
+            const tbody = document.getElementById('spreadsheetBody');
+            const table = document.getElementById('spreadsheetTable');
+            const dayForm = document.getElementById('dayWiseForm');
+            const section = document.getElementById('timesheetSection');
+            const thead = document.querySelector('.spreadsheet thead');
+
+            EDITABLE_COL_INDICES = Array.from({ length: activeCols.length }, (_, i) => i + 4);
+
+            if (thead) {
+                const hasGroups = activeCols.some(c => c.topLabel);
+
+                if (hasGroups) {
+                    let row1 = `<tr><th class="col-sno" rowspan="2">#</th><th class="col-name" rowspan="2">Full Name</th><th class="col-date" rowspan="2">Date</th><th class="col-day" rowspan="2">Day</th>`;
+                    let row2 = `<tr>`;
+
+                    let groups = [];
+                    activeCols.forEach(col => {
+                        let lastGroup = groups[groups.length - 1];
+                        if (lastGroup && lastGroup.label === col.topLabel) {
+                            lastGroup.count++;
+                        } else {
+                            groups.push({ label: col.topLabel, count: 1 });
+                        }
+                    });
+
+                    groups.forEach(g => {
+                        if (g.count === 1) {
+                            let col = activeCols.find(c => c.topLabel === g.label);
+                            row1 += `<th rowspan="2" class="${col.width}">${g.label}</th>`;
+                        } else {
+                            row1 += `<th colspan="${g.count}">${g.label}</th>`;
+                        }
+                    });
+
+                    activeCols.forEach(col => {
+                        let g = groups.find(x => x.label === col.topLabel);
+                        if (g.count > 1) {
+                            row2 += `<th class="${col.width}">${col.label}</th>`;
+                        }
+                    });
+
+                    row1 += `</tr>`;
+                    row2 += `</tr>`;
+                    thead.innerHTML = row1 + row2;
+                } else {
+                    let thHtml = `<tr><th class="col-sno">#</th><th class="col-name">Full Name</th><th class="col-date">Date</th><th class="col-day">Day</th>`;
+                    activeCols.forEach(col => { thHtml += `<th class="${col.width}">${col.label}</th>`; });
+                    thHtml += `</tr>`;
+                    thead.innerHTML = thHtml;
+                }
+            }
+
+            tbody.innerHTML = '';
+            dayForm.innerHTML = '';
+
+            if (selectedDayOnly) {
+                section.classList.add('vertical-mode');
+                table.style.display = 'none';
+                dayForm.style.display = 'grid';
+
+                const d = selectedDayOnly;
+                const mIdx = getMonthIndex(currentMonth);
+                const date = new Date(currentYear, mIdx, d), dName = getDayName(date), dStr = formatDate(d, currentMonth, currentYear);
+                const rD = data ? data.find(x => x.date === dStr) : null;
+
+                let dHtml = `
+                    <div class="vertical-info-banner">
+                        <div class="vertical-info-item"><span>Worker</span><span>${currentWorker}</span></div>
+                        <div class="vertical-info-item"><span>Date</span><span>${dStr}</span></div>
+                        <div class="vertical-info-item"><span>Day</span><span>${dName}</span></div>
+                    </div>`;
+
+                activeCols.forEach(col => {
+                    let step = col.step ? `step='${col.step}'` : '';
+                    let val = rD && rD[col.id] !== undefined ? rD[col.id] : '';
+                    let oninput = col.sum || col.countTimesheets ? `oninput='updateTotals()'` : '';
+                    let style = col.id === 'remarks' ? 'style="text-align: left; padding-left: 10px;"' : '';
+                    let gridCol = col.id === 'remarks' ? 'style="grid-column: 1 / -1;"' : '';
+                    let labelText = col.topLabel && col.topLabel !== col.label ? `${col.topLabel} - ${col.label}` : col.label;
+                    dHtml += `<div class="vertical-field-card" ${gridCol}><label>${labelText}</label><input type='${col.type}' id='${col.id}_${d}' value='${val}' ${step} ${oninput} ${style} ${isLocked ? 'readonly' : ''}></div>`;
+                });
+
+                dHtml += `
+                    <div class="vertical-submit-container">
+                        <button class="btn-submit" onclick="submitTimesheet()" style="background: #10b981; padding: 12px 30px; font-size: 1rem;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;">
+                                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                                <polyline points="7 3 7 8 15 8"></polyline>
+                            </svg>
+                            Submit & Save
+                        </button>
+                    </div>`;
+
+                dayForm.innerHTML = dHtml;
+
+                setTimeout(() => {
+                    const firstInput = document.getElementById(`${activeCols[0].id}_${d}`);
+                    if (firstInput) firstInput.focus();
+                }, 100);
+
+            } else {
+                section.classList.remove('vertical-mode');
+                table.style.display = 'table';
+                dayForm.style.display = 'none';
+
+                const mIdx = getMonthIndex(currentMonth);
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const date = new Date(currentYear, mIdx, d), dName = getDayName(date), dStr = formatDate(d, currentMonth, currentYear), isSun = date.getDay() === 0, isSat = date.getDay() === 6;
+                    const tr = document.createElement('tr');
+                    if (isSun) tr.classList.add('row-sunday'); else if (isSat) tr.classList.add('row-saturday');
+                    const rD = data ? data.find(x => x.date === dStr) : null;
+
+                    let rowHtml = `<td class="${isLocked ? 'locked' : ''}">${d}</td><td class="${isLocked ? 'locked' : ''}">${currentWorker}</td><td class="${isLocked ? 'locked' : ''}">${dStr}</td><td class='${isSun ? 'sunday' : isSat ? 'saturday' : ''} ${isLocked ? 'locked' : ''}'>${dName}</td>`;
+
+                    activeCols.forEach(col => {
+                        let step = col.step ? `step='${col.step}'` : '';
+                        let oninput = col.sum || col.countTimesheets ? `oninput='updateTotals()'` : '';
+                        let val = rD && rD[col.id] !== undefined ? rD[col.id] : '';
+                        rowHtml += `<td class="${isLocked ? 'locked' : ''}"><input type='${col.type}' id='${col.id}_${d}' value='${val}' ${step} ${oninput} ${isLocked ? 'readonly' : ''}></td>`;
+                    });
+
+                    tr.innerHTML = rowHtml;
+                    tbody.appendChild(tr);
+                }
+                buildTotalsRow(); updateTotals();
+            }
+        }
+
+        function buildTotalsRow() {
+            const activeCols = getActiveColumns();
+            let html = `<tr><td colspan='4'>TOTAL</td>`;
+            activeCols.forEach(col => {
+                if (col.sum) {
+                    html += `<td id='total_${col.id}'>${col.prefix || ''}0${col.prefix ? '.00' : ''}</td>`;
+                } else if (col.countTimesheets) {
+                    html += `<td id='totalTimesheets' style='font-size:0.7rem;'></td>`;
+                } else {
+                    html += `<td></td>`;
+                }
+            });
+            html += `</tr>`;
+            document.getElementById('spreadsheetFoot').innerHTML = html;
+        }
+
+        function updateTotals() {
+            const activeCols = getActiveColumns();
+            let totals = {};
+            activeCols.filter(c => c.sum).forEach(c => totals[c.id] = 0);
+            let tsCount = 0;
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                const firstColId = activeCols[0].id;
+                if (!document.getElementById(`${firstColId}_${d}`)) continue;
+
+                let hasTimesheetEntry = false;
+
+                activeCols.forEach(col => {
+                    const el = document.getElementById(`${col.id}_${d}`);
+                    if (!el) return;
+
+                    if (col.sum) {
+                        totals[col.id] += parseFloat(el.value) || 0;
+                    }
+
+                    if (currentDepartment === 'AB') {
+                        if (col.id === 'tsNumber' && el.value) {
+                            hasTimesheetEntry = true;
+                        }
+                    } else {
+                        if ((col.id === 'clientIn' || col.id === 'clientOut') && el.value) {
+                            hasTimesheetEntry = true;
+                        }
+                    }
+                });
+
+                if (hasTimesheetEntry) tsCount++;
+            }
+
+            activeCols.forEach(col => {
+                if (col.sum) {
+                    let val = totals[col.id];
+                    let text = col.prefix ? col.prefix + val.toFixed(2) : (Number.isInteger(val) ? val.toString() : val.toFixed(1));
+                    document.getElementById(`total_${col.id}`).textContent = text;
+                }
+            });
+
+            const countEl = document.getElementById('totalTimesheets');
+            if (countEl) {
+                countEl.innerHTML = `CLIENT TIMESHEETS:<br>${tsCount}`;
+            }
+        }
+
+        function getTableRows() {
+            let rows = JSON.parse(JSON.stringify(currentData || []));
+            const mIdx = getMonthIndex(currentMonth);
+            const activeCols = getActiveColumns();
+
+            if (rows.length === 0) {
+                for (let d = 1; d <= daysInMonth; d++) {
+                    let row = {
+                        name: currentWorker,
+                        date: formatDate(d, currentMonth, currentYear),
+                        day: getDayName(new Date(currentYear, mIdx, d))
+                    };
+                    activeCols.forEach(col => {
+                        row[col.id] = '';
+                    });
+                    rows.push(row);
+                }
+            }
+            for (let d = 1; d <= daysInMonth; d++) {
+                const firstColId = activeCols[0].id;
+                const el = id => document.getElementById(`${id}_${d}`);
+                if (el(firstColId)) {
+                    const dStr = formatDate(d, currentMonth, currentYear);
+                    let row = rows.find(r => r.date === dStr);
+                    if (!row) {
+                        row = { name: currentWorker, date: dStr, day: getDayName(new Date(currentYear, mIdx, d)) };
+                        rows.push(row);
+                    }
+                    activeCols.forEach(col => {
+                        row[col.id] = el(col.id).value;
+                    });
+                }
+            }
+            return rows;
+        }
+
+        async function submitTimesheet() {
+            showLoading('Saving...');
+            const activeCols = getActiveColumns();
+            const headers = ['Full Name', 'Date', 'Day', ...activeCols.map(c => c.topLabel && c.topLabel !== c.label ? `${c.topLabel} ${c.label}` : c.label)];
+            const keys = ['name', 'date', 'day', ...activeCols.map(c => c.id)];
+            const sums = activeCols.map(c => c.sum ? true : false);
+            
+            const payload = { 
+                action: 'saveData', 
+                department: currentDepartment, 
+                monthYear: `${currentMonth} ${currentYear}`, 
+                sheetName: `${currentWorker}-${currentMonth}-${currentYear}`, 
+                workerName: currentWorker, 
+                rows: getTableRows(),
+                headers: headers,
+                keys: keys,
+                sums: sums
+            };
+            try { await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) }); hideLoading(); showToast('Saved Successfully!'); }
+            catch (e) { hideLoading(); showToast('Error saving', 'error'); }
+        }
+
+        async function handleSaveAndExit() {
+            await submitTimesheet();
+            exitTimesheet();
+        }
+
+        async function handleVerify() {
+            const vName = document.getElementById('headerVerifierName').value;
+            if (!vName) { showToast('Enter Verifier Name', 'error'); return; }
+
+            showLoading('Saving & Verifying...');
+
+            // 1. Save Data First
+            const activeCols = getActiveColumns();
+            const headers = ['Full Name', 'Date', 'Day', ...activeCols.map(c => c.topLabel && c.topLabel !== c.label ? `${c.topLabel} ${c.label}` : c.label)];
+            const keys = ['name', 'date', 'day', ...activeCols.map(c => c.id)];
+            const sums = activeCols.map(c => c.sum ? true : false);
+            
+            const savePayload = { action: 'saveData', department: currentDepartment, monthYear: `${currentMonth} ${currentYear}`, sheetName: `${currentWorker}-${currentMonth}-${currentYear}`, workerName: currentWorker, rows: getTableRows(), headers: headers, keys: keys, sums: sums };
+            try {
+                const saveRes = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(savePayload) }).then(r => r.json());
+                if (saveRes.status !== 'success') {
+                    hideLoading(); showToast(saveRes.message || 'Error saving before verify', 'error'); return;
+                }
+            } catch (e) { hideLoading(); showToast('Error saving data', 'error'); return; }
+
+            // 2. Verify Data
+            const verifyPayload = { action: 'verifyWorker', department: currentDepartment, monthYear: `${currentMonth} ${currentYear}`, workerName: currentWorker, verifierName: vName, rows: getTableRows(), headers: headers, keys: keys };
+            try {
+                const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(verifyPayload) }).then(r => r.json());
+                hideLoading();
+                if (res.status === 'success') {
+                    showToast('Saved & Verified successfully!');
+                    loadTimesheet();
+                } else {
+                    showToast(res.message || 'Error verifying', 'error');
+                }
+            } catch (e) { hideLoading(); showToast('Error verifying data', 'error'); }
+        }
+
+        async function handleForgotPassword(type) {
+            let dept, name;
+            if (type === 'admin') {
+                dept = 'Admin';
+                name = document.getElementById('adminId').value.trim();
+                if (!name) { showToast('Enter Admin User ID first', 'error'); return; }
+            } else {
+                dept = document.getElementById('departmentSelect').value;
+                name = document.getElementById('workerSelect').value.trim();
+                if (!dept || !name) { showToast('Select department and name first', 'error'); return; }
+            }
+
+            if (!confirm(`Send current password for ${name} to registered email?`)) return;
+
+            showLoading('Sending email...');
+            try {
+                const res = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'forgotPassword', department: dept, workerName: name })
+                }).then(r => r.json());
+                hideLoading();
+                if (res.status === 'success') showToast(res.message);
+                else showToast(res.message, 'error');
+            } catch (e) { hideLoading(); showToast('Connection error', 'error'); }
+        }
+
+        function openAdminChangePasswordModal() {
+            const name = document.getElementById('adminId').value.trim();
+            if (!name) { showToast('Enter Admin User ID first', 'error'); return; }
+
+            const admin = masterAdmins.find(a => a.name === name);
+            if (!admin) { showToast('Invalid Admin User ID', 'error'); return; }
+
+            window._pendingCp = { dept: 'Admin', name: name, expected: admin.password };
+
+            document.getElementById('cpOldPassword').value = '';
+            document.getElementById('cpNewPassword').value = '';
+            document.getElementById('cpConfirmPassword').value = '';
+            document.getElementById('changePasswordModal').classList.add('show');
+        }
+
+        function openChangePasswordModal() {
+            const dept = document.getElementById('departmentSelect').value;
+            const name = document.getElementById('workerSelect').value.trim();
+            if (!dept || !name) {
+                showToast('Select department and worker first', 'error');
+                return;
+            }
+
+            const workerList = masterWorkerList[dept] || [];
+            const workerObj = workerList.find(w => (typeof w === 'string' ? w : w.name) === name);
+            if (!workerObj) {
+                showToast('Invalid worker name', 'error');
+                return;
+            }
+
+            window._pendingCp = {
+                dept: dept,
+                name: name,
+                expected: typeof workerObj === 'string' ? '' : (workerObj.password || '')
+            };
+
+            document.getElementById('cpOldPassword').value = '';
+            document.getElementById('cpNewPassword').value = '';
+            document.getElementById('cpConfirmPassword').value = '';
+            document.getElementById('changePasswordModal').classList.add('show');
+        }
+
+        async function submitPasswordChange() {
+            if (!window._pendingCp) return;
+            const { dept, name, expected } = window._pendingCp;
+
+            const oldPwd = document.getElementById('cpOldPassword').value;
+            const newPwd = document.getElementById('cpNewPassword').value;
+            const confPwd = document.getElementById('cpConfirmPassword').value;
+
+            if (!newPwd || newPwd.trim() === '') {
+                showToast('Enter a valid new password', 'error');
+                return;
+            }
+            if (newPwd !== confPwd) {
+                showToast('New passwords do not match', 'error');
+                return;
+            }
+
+            if (expected && expected.trim() !== '') {
+                if (oldPwd !== expected) {
+                    showToast('Incorrect old password', 'error');
+                    return;
+                }
+            }
+
+            showLoading('Updating password...');
+            try {
+                const res = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'changePassword', department: dept, workerName: name, oldPassword: oldPwd, newPassword: newPwd })
+                }).then(r => r.json());
+
+                hideLoading();
+                if (res.status === 'success') {
+                    showToast('Password updated successfully!');
+                    closeModal('changePasswordModal');
+                    if (dept !== 'Admin') {
+                        document.getElementById('workerPassword').value = newPwd;
+                    } else {
+                        document.getElementById('adminPassword').value = newPwd;
+                    }
+                    refreshWorkerListFromMaster();
+                } else {
+                    showToast(res.message || 'Error updating password', 'error');
+                }
+            } catch (e) {
+                hideLoading();
+                showToast('Error connecting to server', 'error');
+            }
+        }
+
+        function goBack() {
+            if (isLocked) {
+                exitTimesheet();
+                return;
+            }
+            document.getElementById('exitConfirmModal').classList.add('show');
+        }
+
+
+        function exitTimesheet() {
+            if (isFullscreen) toggleFullscreen();
+            showSection('home');
+            document.getElementById('workerPassword').value = '';
+        }
+
+        // ===== ZOOM FUNCTIONALITY =====
+        function applyZoom() {
+            const slider = document.getElementById('zoomSliderInput');
+            const zoomVal = parseInt(slider.value);
+            document.getElementById('zoomText').textContent = zoomVal + '%';
+
+            const table = document.getElementById('spreadsheetTable');
+            if (table) {
+                table.style.zoom = zoomVal / 100;
+            }
+
+            const dayForm = document.getElementById('dayWiseForm');
+            if (dayForm) {
+                dayForm.style.zoom = zoomVal / 100;
+            }
+        }
+
+        function zoomIn() {
+            const slider = document.getElementById('zoomSliderInput');
+            if (parseInt(slider.value) < 150) {
+                slider.value = parseInt(slider.value) + 10;
+                applyZoom();
+            }
+        }
+
+        function zoomOut() {
+            const slider = document.getElementById('zoomSliderInput');
+            if (parseInt(slider.value) > 50) {
+                slider.value = parseInt(slider.value) - 10;
+                applyZoom();
+            }
+        }
+
+        // ===== FULLSCREEN =====
+        let isFullscreen = false;
+        function toggleFullscreen() {
+            const section = document.getElementById('timesheetSection'), header = document.querySelector('.header'), footer = document.querySelector('.footer'), icon = document.getElementById('fullscreenIcon');
+            isFullscreen = !isFullscreen;
+            if (isFullscreen) {
+                section.classList.add('fullscreen-mode');
+                if (header) header.style.display = 'none';
+                if (footer) footer.style.display = 'none';
+                icon.innerHTML = '<polyline points="4 14 10 14 10 20"></polyline><polyline points="20 10 14 10 14 4"></polyline><line x1="14" y1="10" x2="21" y2="3"></line><line x1="3" y1="21" x2="10" y2="14"></line>';
+            } else {
+                section.classList.remove('fullscreen-mode');
+                if (header) header.style.display = '';
+                if (footer) footer.style.display = '';
+                icon.innerHTML = '<polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line>';
+            }
+        }
+
+        // ===== KEYBOARD NAVIGATION =====
+        let EDITABLE_COL_INDICES = [];
+        document.addEventListener('keydown', function (e) {
+            const active = document.activeElement;
+            if (!active || !active.closest('.spreadsheet tbody')) return;
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', 'Tab'].indexOf(e.key) === -1) return;
+
+            const td = active.closest('td'), tr = td.parentElement, tbody = tr.parentElement;
+            const cellIndex = Array.from(tr.children).indexOf(td), rowIndex = Array.from(tbody.children).indexOf(tr), totalRows = tbody.children.length;
+            const currentEditIdx = EDITABLE_COL_INDICES.indexOf(cellIndex);
+            let targetRow, targetInput;
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                targetRow = tbody.children[rowIndex + 1];
+                if (targetRow) targetInput = targetRow.children[cellIndex]?.querySelector('input, select');
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                targetRow = tbody.children[rowIndex - 1];
+                if (targetRow) targetInput = targetRow.children[cellIndex]?.querySelector('input, select');
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                if (currentEditIdx < EDITABLE_COL_INDICES.length - 1) targetInput = tr.children[EDITABLE_COL_INDICES[currentEditIdx + 1]]?.querySelector('input, select');
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                if (currentEditIdx > 0) targetInput = tr.children[EDITABLE_COL_INDICES[currentEditIdx - 1]]?.querySelector('input, select');
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (e.shiftKey) {
+                    targetRow = tbody.children[rowIndex - 1];
+                    if (targetRow) targetInput = targetRow.children[cellIndex]?.querySelector('input, select');
+                } else {
+                    if (rowIndex < totalRows - 1) targetInput = tbody.children[rowIndex + 1].children[cellIndex]?.querySelector('input, select');
+                    else if (currentEditIdx < EDITABLE_COL_INDICES.length - 1) targetInput = tbody.children[0].children[EDITABLE_COL_INDICES[currentEditIdx + 1]]?.querySelector('input, select');
+                }
+            } else if (e.key === 'Tab') {
+                if (!e.shiftKey && currentEditIdx === EDITABLE_COL_INDICES.length - 1) {
+                    e.preventDefault();
+                    targetRow = tbody.children[rowIndex + 1];
+                    if (targetRow) targetInput = targetRow.children[EDITABLE_COL_INDICES[0]]?.querySelector('input, select');
+                } else if (e.shiftKey && currentEditIdx === 0) {
+                    e.preventDefault();
+                    targetRow = tbody.children[rowIndex - 1];
+                    if (targetRow) targetInput = targetRow.children[EDITABLE_COL_INDICES[EDITABLE_COL_INDICES.length - 1]]?.querySelector('input, select');
+                }
+            }
+
+            if (targetInput) {
+                targetInput.focus();
+                targetInput.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'nearest' });
+            }
+        });
+
+        // Global shortcut for fullscreen
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'F11') {
+                const section = document.getElementById('timesheetSection');
+                if (section && !section.classList.contains('hidden')) { e.preventDefault(); toggleFullscreen(); }
+            }
+        });
+
+        function exportToExcel() {
+            const activeCols = getActiveColumns();
+            const data = getTableRows();
+
+            let headers = ["Date", "Day"];
+            activeCols.forEach(col => {
+                let label = col.topLabel && col.topLabel !== col.label ? `${col.topLabel} ${col.label}` : col.label;
+                headers.push(label);
+            });
+
+            let aoa = [headers];
+            data.forEach(row => {
+                let rowData = [row.date, row.day];
+                activeCols.forEach(col => {
+                    let val = row[col.id] !== undefined ? row[col.id] : '';
+                    rowData.push(val);
+                });
+                aoa.push(rowData);
+            });
+
+            const ws = XLSX.utils.aoa_to_sheet(aoa);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Timesheet");
+
+            const filename = `${currentWorker}_${currentMonth}_${currentYear}.xlsx`;
+
+            // Download Locally
+            XLSX.writeFile(wb, filename);
+
+            // Upload to Google Drive
+            showToast('Uploading Excel to Drive...', 'success');
+            const base64Data = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
+
+            fetch(SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({
+                    action: 'uploadExcel',
+                    filename: filename,
+                    department: currentDepartment,
+                    workerName: currentWorker,
+                    month: currentMonth,
+                    year: currentYear,
+                    data: base64Data
+                })
+            }).then(r => r.json()).then(res => {
+                if (res.status === 'success') {
+                    showToast('Excel saved to Drive successfully!', 'success');
+                } else {
+                    showToast(res.message || 'Error saving to Drive', 'error');
+                }
+            }).catch(e => {
+                showToast('Connection error while saving to Drive', 'error');
+                console.error(e);
+            });
+        }
+    </script>
+</body>
+
+</html>
