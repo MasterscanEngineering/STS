@@ -2315,6 +2315,47 @@
 
                 let hasTimesheetEntry = false;
 
+                if (currentDepartment === 'RADIOGRAPHY') {
+                    const getVal = (id) => {
+                        const el = document.getElementById(`${id}_${d}`);
+                        return el && el.value !== '' ? parseFloat(el.value) : 0;
+                    };
+                    const hasVal = (id) => {
+                        const el = document.getElementById(`${id}_${d}`);
+                        return el && el.value !== '';
+                    };
+
+                    const expF4x10 = getVal('expF4x10');
+                    const expF4x15 = getVal('expF4x15');
+                    const expF17x14 = getVal('expF17x14');
+                    const expFReshoot = getVal('expFReshoot');
+                    const expFTotalEl = document.getElementById(`expFTotal_${d}`);
+                    
+                    if (expFTotalEl) {
+                        if (hasVal('expF4x10') || hasVal('expF4x15') || hasVal('expF17x14') || hasVal('expFReshoot')) {
+                            expFTotalEl.value = expF4x10 + expF4x15 + expF17x14 + expFReshoot;
+                        } else {
+                            expFTotalEl.value = '';
+                        }
+                    }
+
+                    const otLunchRt = getVal('otLunchRt');
+                    const otSiteToSite = getVal('otSiteToSite');
+                    const otXrayScar = getVal('otXrayScar');
+                    const otProfile = getVal('otProfile');
+                    const timesheetOt = getVal('timesheetOt');
+                    const sunday = getVal('sunday');
+                    const totalOtEl = document.getElementById(`totalOt_${d}`);
+
+                    if (totalOtEl) {
+                        if (hasVal('otLunchRt') || hasVal('otSiteToSite') || hasVal('otXrayScar') || hasVal('otProfile') || hasVal('timesheetOt') || hasVal('sunday')) {
+                            totalOtEl.value = otLunchRt + otSiteToSite + otXrayScar + otProfile + timesheetOt + sunday;
+                        } else {
+                            totalOtEl.value = '';
+                        }
+                    }
+                }
+
                 activeCols.forEach(col => {
                     const el = document.getElementById(`${col.id}_${d}`);
                     if (!el) return;
@@ -2748,6 +2789,13 @@
                 console.error(e);
             });
         }
+        window.addEventListener('beforeunload', function (e) {
+            const timesheetSection = document.getElementById('timesheetSection');
+            if (timesheetSection && !timesheetSection.classList.contains('hidden') && typeof isLocked !== 'undefined' && !isLocked) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
     </script>
 </body>
 
