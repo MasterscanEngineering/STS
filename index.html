@@ -1406,6 +1406,7 @@
             <div class="nav-tabs">
                 <button class="nav-btn active" onclick="showSection('home')">Home</button>
                 <button class="nav-btn" id="btnAdminNav" onclick="toggleAdminLogin()">Admin Portal</button>
+                <button class="nav-btn" onclick="window.location.href='accounts.html'">Accounts Portal</button>
                 <button class="nav-btn" onclick="showStatusModal()">Submission Status</button>
             </div>
         </div>
@@ -1814,6 +1815,7 @@
                     const currentVal = deptSelect.value;
                     deptSelect.innerHTML = '<option value="">Select Department</option>';
                     Object.keys(masterWorkerList).forEach(dept => {
+                        if (dept.toLowerCase().includes('accounts')) return;
                         const opt = document.createElement('option');
                         opt.value = dept;
                         opt.textContent = dept;
@@ -2330,7 +2332,7 @@
                     const expF17x14 = getVal('expF17x14');
                     const expFReshoot = getVal('expFReshoot');
                     const expFTotalEl = document.getElementById(`expFTotal_${d}`);
-                    
+
                     if (expFTotalEl) {
                         if (hasVal('expF4x10') || hasVal('expF4x15') || hasVal('expF17x14') || hasVal('expFReshoot')) {
                             expFTotalEl.value = expF4x10 + expF4x15 + expF17x14 + expFReshoot;
