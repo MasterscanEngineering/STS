@@ -51,29 +51,47 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyyAfDeE-dM6fRXXH3Vk
             }
         }
 
+        let currentAdminUser = null;
+
         async function refreshWorkerListFromMaster() {
             try {
                 const res = await fetch(`${SCRIPT_URL}?action=getWorkerList`).then(r => r.json());
                 if (res.status === 'success') {
                     masterWorkerList = res.data;
                     masterAdmins = res.admins || [];
-
-                    // Dynamically populate department dropdown
-                    const deptSelect = document.getElementById('departmentSelect');
-                    const currentVal = deptSelect.value;
-                    deptSelect.innerHTML = '<option value="">Select Department</option>';
-                    Object.keys(masterWorkerList).forEach(dept => {
-                        if (dept.toLowerCase().includes('accounts')) return;
-                        const opt = document.createElement('option');
-                        opt.value = dept;
-                        opt.textContent = dept;
-                        deptSelect.appendChild(opt);
-                    });
-                    if (currentVal) deptSelect.value = currentVal;
-
-                    loadWorkerList();
+                    populateDepartmentDropdown();
                 }
             } catch (e) { console.error('Master list fetch failed', e); }
+        }
+
+        function populateDepartmentDropdown() {
+            const deptSelect = document.getElementById('departmentSelect');
+            if (!deptSelect) return;
+            const currentVal = deptSelect.value;
+            deptSelect.innerHTML = '<option value="">Select Department</option>';
+
+            let availableDepts = Object.keys(masterWorkerList).filter(dept => !dept.toLowerCase().includes('accounts'));
+
+            if (isAdmin && currentAdminUser && currentAdminUser.allowedDepts && !currentAdminUser.allowedDepts.includes('ALL')) {
+                availableDepts = availableDepts.filter(dept => currentAdminUser.allowedDepts.includes(dept));
+            }
+
+            availableDepts.forEach(dept => {
+                const opt = document.createElement('option');
+                opt.value = dept;
+                opt.textContent = dept;
+                deptSelect.appendChild(opt);
+            });
+
+            if (availableDepts.length === 1) {
+                deptSelect.value = availableDepts[0];
+            } else if (availableDepts.includes(currentVal)) {
+                deptSelect.value = currentVal;
+            } else {
+                deptSelect.value = '';
+            }
+
+            loadWorkerList();
         }
 
         function loadWorkerList() {
@@ -96,7 +114,7 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyyAfDeE-dM6fRXXH3Vk
                 btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>';
             } else {
                 el.type = 'password';
-                btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
+                btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
             }
         }
 
@@ -164,16 +182,17 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyyAfDeE-dM6fRXXH3Vk
 
         function performLogout() {
             isAdmin = false;
+            currentAdminUser = null;
             document.body.classList.remove('admin-active');
 
             // Clean up UI instantly
-            document.getElementById('btnAdminNav').textContent = 'Admin Portal';
+            document.getElementById('btnAdminNav').textContent = 'Supervisor Portal';
             document.getElementById('welcomeGreeting').textContent = 'Welcome back!';
             document.getElementById('workerPasswordGroup').style.display = 'flex';
             document.getElementById('workerPassword').value = '';
 
             const loginLink = document.querySelector('.admin-login-link');
-            if (loginLink) loginLink.textContent = 'Login as Administrator';
+            if (loginLink) loginLink.textContent = 'Login as Supervisor';
 
             // Hide admin verification panels
             document.getElementById('btnAdminVerify').style.display = 'none';
@@ -185,35 +204,37 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyyAfDeE-dM6fRXXH3Vk
             // Exit any active timesheet view
             exitTimesheet();
 
-            showToast('Logged out, closing session...');
+            // Repopulate all departments for normal worker selection
+            populateDepartmentDropdown();
 
-            // Attempt to close the tab
-            setTimeout(() => {
-                window.close();
-                // Fallback for browsers that block window.close()
-                if (!window.closed) {
-                    window.location.href = "about:blank";
-                }
-            }, 300);
+            showToast('Logged out of Supervisor');
         }
 
         function closeModal(id) { document.getElementById(id).classList.remove('show'); }
 
         function handleAdminLogin() {
-            const id = document.getElementById('adminId').value;
+            const id = document.getElementById('adminId').value.trim();
             const pw = document.getElementById('adminPassword').value;
 
-            const admin = masterAdmins.find(a => a.name === id);
-            if (admin && admin.password === pw) {
+            const admin = masterAdmins.find(a => a.name === id && String(a.password) === String(pw));
+            if (admin) {
                 isAdmin = true;
+                currentAdminUser = admin;
                 document.body.classList.add('admin-active');
                 closeModal('loginModal');
-                document.getElementById('btnAdminNav').textContent = 'Admin Portal Logout';
-                document.getElementById('welcomeGreeting').textContent = 'Admin Portal Active';
+                document.getElementById('btnAdminNav').textContent = 'Supervisor Portal Logout';
+                
+                let deptInfo = '';
+                if (admin.allowedDepts && !admin.allowedDepts.includes('ALL') && admin.allowedDepts.length > 0) {
+                    deptInfo = ' (' + admin.allowedDepts.join(', ') + ')';
+                }
+                document.getElementById('welcomeGreeting').textContent = 'Supervisor Portal Active' + deptInfo;
                 document.getElementById('workerPasswordGroup').style.display = 'none';
                 const loginLink = document.querySelector('.admin-login-link');
-                if (loginLink) loginLink.textContent = 'Logout Administrator';
-                showToast('Welcome Administrator!');
+                if (loginLink) loginLink.textContent = 'Logout Supervisor';
+
+                populateDepartmentDropdown();
+                showToast('Welcome Supervisor!');
             } else {
                 showToast('Invalid credentials', 'error');
             }
@@ -224,6 +245,11 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyyAfDeE-dM6fRXXH3Vk
             const mon = document.getElementById('monthSelect').value;
             const yr = document.getElementById('yearSelect').value;
             if (!dept) { showToast('Select Department first', 'error'); return; }
+
+            const btnViewPayroll = document.getElementById('btnViewPayrollStatus');
+            const btnDownloadPayroll = document.getElementById('btnDownloadPayrollStatus');
+            if (btnViewPayroll) btnViewPayroll.style.display = isAdmin ? 'inline-flex' : 'none';
+            if (btnDownloadPayroll) btnDownloadPayroll.style.display = isAdmin ? 'inline-flex' : 'none';
 
             showLoading('Fetching status...');
             document.getElementById('statusSubtitle').textContent = `${dept} · ${mon} ${yr}`;
@@ -1623,6 +1649,69 @@ function downloadExcelStep3() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Step3_Mapping");
     XLSX.writeFile(wb, "Step3_" + currentUploadedFileName);
+}
+
+async function showAccountsCommentInPortal() {
+    if (!step4Data || step4Data.length === 0) {
+        return alert('Please fetch and compare data first.');
+    }
+    const dept = document.getElementById('summaryDept').value;
+    const month = document.getElementById('summaryMonth').value;
+    const year = document.getElementById('summaryYear').value;
+
+    if (!dept || !month || !year) {
+        return alert('Please select department, month, and year.');
+    }
+
+    const perWorkerStats = {};
+    const workerGroups = {};
+    step4Data.forEach(r => {
+        if (!workerGroups[r.NAME]) workerGroups[r.NAME] = [];
+        workerGroups[r.NAME].push(r);
+    });
+
+    Object.keys(workerGroups).forEach(wName => {
+        const wRows = workerGroups[wName];
+        let wMatched = 0;
+        let wMismatched = 0;
+        wRows.forEach(r => {
+            const sUpper = (r.SUMMARY || '').toUpperCase();
+            let match1 = sUpper.match(/^(\d+) MATCHED$/);
+            let match2 = sUpper.match(/^(\d+) MATCHED, (\d+) MISMATCHED$/);
+            let match3 = sUpper.match(/^(\d+) MISMATCHED$/);
+            if (sUpper === 'MATCHED') wMatched++;
+            else if (match1) wMatched += parseInt(match1[1], 10);
+            else if (match2) {
+                wMatched += parseInt(match2[1], 10);
+                wMismatched += parseInt(match2[2], 10);
+            } else if (match3) {
+                wMismatched += parseInt(match3[1], 10);
+            } else {
+                wMismatched++;
+            }
+        });
+        perWorkerStats[wName] = { submitted: wMatched, notSubmitted: wMismatched };
+    });
+
+    localStorage.setItem(`accountsStats_${dept}_${month}_${year}`, JSON.stringify(perWorkerStats));
+
+    showAccountsLoading(true);
+    try {
+        const res = await fetch(SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+                action: 'saveAccountsStats',
+                department: dept,
+                monthYear: `${month} ${year}`,
+                stats: perWorkerStats
+            })
+        }).then(r => r.json());
+        showAccountsLoading(false);
+        alert(res.message || 'Accounts Comment is now visible in the portal!');
+    } catch (e) {
+        showAccountsLoading(false);
+        alert('Accounts Comment enabled in portal!');
+    }
 }
 
 function downloadSummaryExcel() {
