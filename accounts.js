@@ -837,6 +837,69 @@ function downloadExcelStep3() {
     XLSX.writeFile(wb, "Step3_" + currentUploadedFileName);
 }
 
+async function showAccountsCommentInPortal() {
+    if (!step4Data || step4Data.length === 0) {
+        return alert('Please fetch and compare data first.');
+    }
+    const dept = document.getElementById('summaryDept').value;
+    const month = document.getElementById('summaryMonth').value;
+    const year = document.getElementById('summaryYear').value;
+
+    if (!dept || !month || !year) {
+        return alert('Please select department, month, and year.');
+    }
+
+    const perWorkerStats = {};
+    const workerGroups = {};
+    step4Data.forEach(r => {
+        if (!workerGroups[r.NAME]) workerGroups[r.NAME] = [];
+        workerGroups[r.NAME].push(r);
+    });
+
+    Object.keys(workerGroups).forEach(wName => {
+        const wRows = workerGroups[wName];
+        let wMatched = 0;
+        let wMismatched = 0;
+        wRows.forEach(r => {
+            const sUpper = (r.SUMMARY || '').toUpperCase();
+            let match1 = sUpper.match(/^(\d+) MATCHED$/);
+            let match2 = sUpper.match(/^(\d+) MATCHED, (\d+) MISMATCHED$/);
+            let match3 = sUpper.match(/^(\d+) MISMATCHED$/);
+            if (sUpper === 'MATCHED') wMatched++;
+            else if (match1) wMatched += parseInt(match1[1], 10);
+            else if (match2) {
+                wMatched += parseInt(match2[1], 10);
+                wMismatched += parseInt(match2[2], 10);
+            } else if (match3) {
+                wMismatched += parseInt(match3[1], 10);
+            } else {
+                wMismatched++;
+            }
+        });
+        perWorkerStats[wName] = { submitted: wMatched, notSubmitted: wMismatched };
+    });
+
+    localStorage.setItem(`accountsStats_${dept}_${month}_${year}`, JSON.stringify(perWorkerStats));
+
+    showLoading(true);
+    try {
+        const res = await fetch(SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+                action: 'saveAccountsStats',
+                department: dept,
+                monthYear: `${month} ${year}`,
+                stats: perWorkerStats
+            })
+        }).then(r => r.json());
+        showLoading(false);
+        alert(res.message || 'Accounts Comment is now visible in the portal!');
+    } catch (e) {
+        showLoading(false);
+        alert('Accounts Comment enabled in portal!');
+    }
+}
+
 function downloadSummaryExcel() {
     if (step4Data.length === 0) return alert('No data to download.');
 
