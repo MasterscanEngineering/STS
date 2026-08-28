@@ -4296,6 +4296,23 @@
                 targetInput.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'nearest' });
             }
         });
+
+        // ===== PREVENT ACCIDENTAL EXIT (LEAVE SITE CONFIRMATION) =====
+        window.addEventListener('beforeunload', function (e) {
+            const timesheetSection = document.getElementById('timesheetSection');
+            const homeSection = document.getElementById('homeSection');
+            const accountsModeSection = document.getElementById('accountsModeSection');
+            const loginSection = document.getElementById('accountsLoginSection');
+
+            const inTimesheet = timesheetSection && !timesheetSection.classList.contains('hidden') && typeof isLocked !== 'undefined' && !isLocked;
+            const inPortal = (homeSection && !homeSection.classList.contains('hidden')) || (accountsModeSection && !accountsModeSection.classList.contains('hidden'));
+            const notInLogin = loginSection ? loginSection.classList.contains('hidden') : true;
+
+            if (inTimesheet || (inPortal && notInLogin)) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
     </script>
 </body>
 
