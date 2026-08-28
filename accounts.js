@@ -1092,11 +1092,18 @@ function toggleFullscreen() {
     }
 }
 
-// ===== PREVENT ACCIDENTAL EXIT =====
+// ===== PREVENT ACCIDENTAL EXIT (LEAVE SITE CONFIRMATION) =====
 window.addEventListener('beforeunload', function (e) {
-    const loginSection = document.getElementById('loginSection');
-    // If the user is inside the portal (not in login section), show warning
-    if (loginSection && !loginSection.classList.contains('active')) {
+    const timesheetSection = document.getElementById('timesheetSection');
+    const homeSection = document.getElementById('homeSection');
+    const accountsModeSection = document.getElementById('accountsModeSection');
+    const loginSection = document.getElementById('accountsLoginSection') || document.getElementById('loginSection');
+
+    const inTimesheet = timesheetSection && !timesheetSection.classList.contains('hidden') && typeof isLocked !== 'undefined' && !isLocked;
+    const inPortal = (homeSection && !homeSection.classList.contains('hidden')) || (accountsModeSection && !accountsModeSection.classList.contains('hidden'));
+    const notInLogin = loginSection ? loginSection.classList.contains('hidden') : true;
+
+    if (inTimesheet || (inPortal && notInLogin)) {
         e.preventDefault();
         e.returnValue = '';
     }
