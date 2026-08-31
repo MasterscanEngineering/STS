@@ -610,9 +610,10 @@ async function fetchAndCompareData() {
             if (result.status === 'success' && result.data) {
                 result.data.forEach(r => {
                     backendData.push({
-                        name: r.name,
+                        name: r.name || r._workerName,
                         date: r.date,
-                        tsNumber: r.tsNumber
+                        tsNumber: r.tsNumber,
+                        sheetType: r._sheetType || 'normal'
                     });
                 });
             } else if (result.status === 'error') {
@@ -645,47 +646,61 @@ async function fetchAndCompareData() {
                 const shortYear = String(year).slice(-2);
                 const excelDateStr = `${d}-${month.substring(0, 3)}-${shortYear}`;
 
-                const dprsMatches = mappedStep2.filter(m => m.name === workerName && m.standardDate === standardDateStr);
-                const stsMatches = backendData.filter(b => b.name === workerName && b.date === standardDateStr);
+                const dprsMatches = mappedStep2.filter(m => (m.name && m.name.trim().toLowerCase() === workerName.trim().toLowerCase()) && m.standardDate === standardDateStr);
+                const stsMatches = backendData.filter(b => (b.name && b.name.trim().toLowerCase() === workerName.trim().toLowerCase()) && b.date === standardDateStr);
 
-                const dprsTsList = dprsMatches.map(m => String(m.tsNumber || '').trim()).filter(ts => ts !== '' && ts !== '-');
-                const stsTsList = stsMatches.map(b => String(b.tsNumber || '').trim()).filter(ts => ts !== '' && ts !== '-');
+                // Collect unique non-empty timesheet numbers from DPRS (Excel upload)
+                const dprsTsList = [];
+                dprsMatches.forEach(m => {
+                    const val = String(m.tsNumber || '').trim();
+                    if (val && val !== '-' && !dprsTsList.includes(val)) {
+                        dprsTsList.push(val);
+                    }
+                });
+
+                // Collect unique non-empty timesheet numbers from STS (both accounts sheet & normal sheet)
+                const stsTsList = [];
+                stsMatches.forEach(b => {
+                    const val = String(b.tsNumber || '').trim();
+                    if (val && val !== '-' && !stsTsList.includes(val)) {
+                        stsTsList.push(val);
+                    }
+                });
 
                 const dprsTsDisplay = dprsTsList.join(', ');
                 const stsTsDisplay = stsTsList.join(' & ');
-                
-                const stsNormalized = stsTsDisplay.replace(/[\s,&\/\\_]/g, '').toLowerCase();
 
                 let summary = 'MISMATCHED';
-                
+
                 const splitIntoTokens = (list) => {
                     let tokens = [];
                     list.forEach(ts => {
                         const parts = String(ts).split(/[\s,&\/\\\|]+/);
                         parts.forEach(p => {
                             const norm = p.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-                            if (norm) tokens.push(norm);
+                            if (norm && !tokens.includes(norm)) tokens.push(norm);
                         });
                     });
                     return tokens;
                 };
-                
+
                 const dprsTokens = splitIntoTokens(dprsTsList);
                 const stsTokens = splitIntoTokens(stsTsList);
-                
+
                 if (dprsTokens.length > 0 || stsTokens.length > 0) {
                     let matchedCount = 0;
-                    
+                    const remainingStsTokens = [...stsTokens];
+
                     dprsTokens.forEach(dprsT => {
-                        const matchIndex = stsTokens.findIndex(stsT => stsT.includes(dprsT) || dprsT.includes(stsT));
+                        const matchIndex = remainingStsTokens.findIndex(stsT => stsT === dprsT || stsT.includes(dprsT) || dprsT.includes(stsT));
                         if (matchIndex !== -1) {
                             matchedCount++;
-                            stsTokens.splice(matchIndex, 1);
+                            remainingStsTokens.splice(matchIndex, 1);
                         }
                     });
-                    
-                    let mismatchedCount = (dprsTokens.length - matchedCount) + stsTokens.length;
-                    
+
+                    let mismatchedCount = (dprsTokens.length - matchedCount) + remainingStsTokens.length;
+
                     if (matchedCount > 0 && mismatchedCount === 0) {
                         summary = `${matchedCount} MATCHED`;
                     } else if (matchedCount > 0 && mismatchedCount > 0) {
