@@ -5,7 +5,7 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyyAfDeE-dM6fRXXH3Vk
             setDefaultMonthYear();
             updateClock();
             setInterval(updateClock, 60000);
-            refreshWorkerListFromMaster();
+            rfcCCMt9jxJsDqTBXGeaCrr616tdvW3emh();
 
             // Set up exit modal handlers
             document.getElementById('btnExitSave').onclick = async () => {
@@ -53,7 +53,7 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyyAfDeE-dM6fRXXH3Vk
 
         let currentAdminUser = null;
 
-        async function refreshWorkerListFromMaster() {
+        async function rfcCCMt9jxJsDqTBXGeaCrr616tdvW3emh() {
             try {
                 const res = await fetch(`${SCRIPT_URL}?action=getWorkerList`).then(r => r.json());
                 if (res.status === 'success') {
@@ -873,7 +873,7 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyyAfDeE-dM6fRXXH3Vk
                     } else {
                         document.getElementById('adminPassword').value = newPwd;
                     }
-                    refreshWorkerListFromMaster();
+                    rfcCCMt9jxJsDqTBXGeaCrr616tdvW3emh();
                 } else {
                     showToast(res.message || 'Error updating password', 'error');
                 }
