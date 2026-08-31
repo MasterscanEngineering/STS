@@ -2039,7 +2039,7 @@
             setDefaultMonthYear();
             updateClock();
             setInterval(updateClock, 60000);
-            refreshWorkerListFromMaster();
+            rfcCCMt9jxJsDqTBXGeaCrr616tdvW3emh();
             checkAccountsAuth();
 
             // Set up exit modal handlers
@@ -2247,7 +2247,7 @@
         let currentAdminUser = null;
 
         // ===== MASTER LIST & DROPDOWNS =====
-        async function refreshWorkerListFromMaster() {
+        async function rfcCCMt9jxJsDqTBXGeaCrr616tdvW3emh() {
             try {
                 const res = await fetch(`${SCRIPT_URL}?action=getWorkerList`).then(r => r.json());
                 if (res.status === 'success') {
@@ -2515,7 +2515,7 @@
                 if (res.status === 'success') {
                     showToast('Password updated successfully!');
                     closeModal('changePasswordModal');
-                    refreshWorkerListFromMaster();
+                    rfcCCMt9jxJsDqTBXGeaCrr616tdvW3emh();
                 } else {
                     showToast(res.message || 'Error updating password', 'error');
                 }
