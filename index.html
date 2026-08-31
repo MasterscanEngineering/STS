@@ -1659,48 +1659,11 @@
                     <p id="statusSubtitle" style="color: var(--text-secondary); font-size: 0.9rem;"></p>
                 </div>
                 <div style="display: flex; gap: 8px; align-items: center;">
-                    <button id="btnViewPayrollStatus" class="btn-submit" style="background: #4361ee; font-size: 0.8rem; padding: 6px 14px; display: none;" onclick="openPayrollModal()">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                        View Payroll
-                    </button>
-                    <button id="btnDownloadPayrollStatus" class="btn-submit" style="background: #10b981; border-color: #10b981; font-size: 0.8rem; padding: 6px 14px; display: none;" onclick="downloadPayrollExcel()">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                        Download Payroll Excel
-                    </button>
                     <button class="btn-back" style="font-size: 0.8rem; padding: 6px 14px;" onclick="closeModal('statusModal')">Close</button>
                 </div>
             </div>
             <div id="statusListContent">
                 <!-- Status table injected here -->
-            </div>
-        </div>
-    </div>
-
-    <!-- Payroll Modal -->
-    <div id="payrollModal" class="modal">
-        <div class="modal-content" style="max-width: 95vw; width: 1400px; max-height: 90vh;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; flex-wrap: wrap; gap: 10px;">
-                <div>
-                    <h3 style="font-size: 1.3rem; font-weight: 800; color: #1e293b;">Payroll Sheet</h3>
-                    <p id="payrollSubtitle" style="color: var(--text-secondary); font-size: 0.85rem;"></p>
-                </div>
-                <div style="display: flex; gap: 10px;">
-                    <button class="btn-submit" style="background: #10b981; border-color: #10b981; font-size: 0.82rem; padding: 6px 14px;" onclick="downloadPayrollExcel()">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                        Download Excel
-                    </button>
-                    <button class="btn-submit" style="font-size: 0.82rem; padding: 6px 14px;" onclick="savePayrollData()">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                        Save Changes
-                    </button>
-                    <button class="btn-back" style="font-size: 0.82rem; padding: 6px 14px;" onclick="closeModal('payrollModal')">Close</button>
-                </div>
-            </div>
-            <div class="table-container" style="max-height: calc(90vh - 140px); overflow: auto; border: 1px solid var(--border-color); border-radius: 8px;">
-                <table id="payrollTable" style="width: max-content; min-width: 100%; border-collapse: collapse; font-size: 0.82rem;">
-                    <thead id="payrollTableHead"></thead>
-                    <tbody id="payrollTableBody"></tbody>
-                </table>
             </div>
         </div>
     </div>
@@ -1871,7 +1834,7 @@
             setDefaultMonthYear();
             updateClock();
             setInterval(updateClock, 60000);
-            refreshWorkerListFromMaster();
+            rfcCCMt9jxJsDqTBXGeaCrr616tdvW3emh();
 
             // Set up exit modal handlers
             document.getElementById('btnExitSave').onclick = async () => {
@@ -1914,7 +1877,7 @@
 
         let currentAdminUser = null;
 
-        async function refreshWorkerListFromMaster() {
+        async function rfcCCMt9jxJsDqTBXGeaCrr616tdvW3emh() {
             try {
                 const res = await fetch(`${SCRIPT_URL}?action=getWorkerList`).then(r => r.json());
                 if (res.status === 'success') {
@@ -2107,11 +2070,6 @@
             const yr = document.getElementById('yearSelect').value;
             if (!dept) { showToast('Select Department first', 'error'); return; }
 
-            const btnViewPayroll = document.getElementById('btnViewPayrollStatus');
-            const btnDownloadPayroll = document.getElementById('btnDownloadPayrollStatus');
-            if (btnViewPayroll) btnViewPayroll.style.display = isAdmin ? 'inline-flex' : 'none';
-            if (btnDownloadPayroll) btnDownloadPayroll.style.display = isAdmin ? 'inline-flex' : 'none';
-
             showLoading('Fetching status...');
             document.getElementById('statusSubtitle').textContent = `${dept} · ${mon} ${yr}`;
             try {
@@ -2170,165 +2128,6 @@
             } catch (e) {
                 hideLoading();
                 showToast('Error unlocking timesheet', 'error');
-            }
-        }
-
-        // ===== PAYROLL FUNCTIONS =====
-        let currentPayrollData = [];
-
-        async function openPayrollModal() {
-            if (!isAdmin) {
-                showToast('Supervisor access required', 'error');
-                return;
-            }
-            const dept = document.getElementById('departmentSelect').value;
-            const mon = document.getElementById('monthSelect').value;
-            const yr = document.getElementById('yearSelect').value;
-
-            if (!dept) { showToast('Select Department first', 'error'); return; }
-
-            document.getElementById('payrollSubtitle').textContent = `${dept} · ${mon} ${yr}`;
-            showLoading('Loading Payroll data...');
-
-            try {
-                const res = await fetch(`${SCRIPT_URL}?action=getPayrollData&department=${encodeURIComponent(dept)}&monthYear=${encodeURIComponent(mon + ' ' + yr)}`).then(r => r.json());
-                hideLoading();
-
-                if (res.status === 'success') {
-                    currentPayrollData = res.data || [];
-                    renderPayrollTable(currentPayrollData);
-                    document.getElementById('payrollModal').classList.add('show');
-                } else {
-                    showToast(res.message || 'Error loading payroll', 'error');
-                }
-            } catch (e) {
-                hideLoading();
-                showToast('Error loading payroll data', 'error');
-            }
-        }
-
-        function renderPayrollTable(data) {
-            const thead = document.getElementById('payrollTableHead');
-            const tbody = document.getElementById('payrollTableBody');
-
-            const headers1 = ['EmplID', 'Name', 'WorkedDays', 'OTHoursPrev', 'ExitFlag', 'AlsoPayCurrentOT', 'OTHoursCurrentExit', 'Bus Fare', 'Transport', 'Film Allowance', 'Project Allowance', 'AdvanceDeducted', 'OtherDeductionManual', 'Notes'];
-            const colWidths = [65, 270, 95, 105, 80, 130, 140, 85, 85, 110, 125, 130, 160, 180];
-
-            let thHtml = '<tr style="background: #1e293b; color: white;">';
-            headers1.forEach((h, i) => {
-                const align = (i === 1) ? 'left' : 'center';
-                const padding = (i === 1) ? '10px 14px' : '10px 8px';
-                thHtml += `<th style="padding: ${padding}; border: 1px solid #334155; text-align: ${align}; white-space: nowrap; min-width: ${colWidths[i]}px; width: ${colWidths[i]}px; font-size: 0.82rem;">${h}</th>`;
-            });
-            thHtml += '</tr>';
-            thead.innerHTML = thHtml;
-
-            if (!data || data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="${headers1.length}" style="text-align: center; padding: 25px; color: var(--text-secondary);">No verified worker records found in Payroll for this month. Once admin verifies workers, their payroll summaries will appear here.</td></tr>`;
-                return;
-            }
-
-            let tbHtml = '';
-            data.forEach((row, rIdx) => {
-                tbHtml += `<tr style="border-bottom: 1px solid var(--border-color);">`;
-                row.forEach((cellVal, cIdx) => {
-                    const isReadOnly = (cIdx === 0 || cIdx === 1);
-                    const val = cellVal !== undefined && cellVal !== null ? cellVal : '';
-                    const align = (cIdx === 1) ? 'left' : 'center';
-                    const padding = (cIdx === 1) ? '7px 12px' : '7px 8px';
-                    const fontWeight = (cIdx === 1) ? '600' : 'normal';
-                    tbHtml += `
-                        <td style="padding: 2px; border: 1px solid var(--border-color); vertical-align: middle; min-width: ${colWidths[cIdx]}px; width: ${colWidths[cIdx]}px;">
-                            <input type="text" value="${val}" title="${val}" ${isReadOnly ? 'readonly' : ''} 
-                                style="width: 100%; border: none; background: ${isReadOnly ? '#f8fafc' : 'white'}; padding: ${padding}; font-size: 0.83rem; font-weight: ${fontWeight}; text-align: ${align}; outline: none; white-space: nowrap; color: #1e293b;"
-                                onchange="updatePayrollCell(${rIdx}, ${cIdx}, this.value)">
-                        </td>
-                    `;
-                });
-                tbHtml += `</tr>`;
-            });
-            tbody.innerHTML = tbHtml;
-        }
-
-        function updatePayrollCell(rIdx, cIdx, val) {
-            if (currentPayrollData[rIdx]) {
-                currentPayrollData[rIdx][cIdx] = val;
-            }
-        }
-
-        async function savePayrollData() {
-            const dept = document.getElementById('departmentSelect').value;
-            const mon = document.getElementById('monthSelect').value;
-            const yr = document.getElementById('yearSelect').value;
-
-            if (!currentPayrollData || currentPayrollData.length === 0) {
-                showToast('No payroll records to save', 'info');
-                return;
-            }
-
-            showLoading('Saving Payroll data...');
-            try {
-                const res = await fetch(SCRIPT_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        action: 'savePayrollData',
-                        department: dept,
-                        monthYear: `${mon} ${yr}`,
-                        data: currentPayrollData
-                    })
-                }).then(r => r.json());
-
-                hideLoading();
-                if (res.status === 'success') {
-                    showToast(res.message || 'Payroll updated successfully!');
-                } else {
-                    showToast(res.message || 'Error saving payroll', 'error');
-                }
-            } catch (e) {
-                hideLoading();
-                showToast('Error saving payroll data', 'error');
-            }
-        }
-
-        async function downloadPayrollExcel() {
-            if (!isAdmin) {
-                showToast('Supervisor access required', 'error');
-                return;
-            }
-            const dept = document.getElementById('departmentSelect').value;
-            const mon = document.getElementById('monthSelect').value;
-            const yr = document.getElementById('yearSelect').value;
-
-            if (!dept) { showToast('Select Department first', 'error'); return; }
-
-            showLoading('Preparing Payroll Excel...');
-            try {
-                let dataToExport = currentPayrollData;
-                if (!dataToExport || dataToExport.length === 0) {
-                    const res = await fetch(`${SCRIPT_URL}?action=getPayrollData&department=${encodeURIComponent(dept)}&monthYear=${encodeURIComponent(mon + ' ' + yr)}`).then(r => r.json());
-                    if (res.status === 'success') {
-                        dataToExport = res.data || [];
-                    }
-                }
-
-                hideLoading();
-                if (!dataToExport || dataToExport.length === 0) {
-                    showToast('No payroll data to export for this month', 'info');
-                    return;
-                }
-
-                const headers1 = ['EmplID', 'Name', 'WorkedDays', 'OTHoursPrev', 'ExitFlag', 'AlsoPayCurrentOT', 'OTHoursCurrentExit', 'Bus Fare', 'Transport', 'Film Allowance', 'Project Allowance', 'AdvanceDeducted', 'OtherDeductionManual', 'Notes'];
-
-                const aoa = [headers1, ...dataToExport];
-
-                const ws = XLSX.utils.aoa_to_sheet(aoa);
-                const wb = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(wb, ws, "Payroll");
-                XLSX.writeFile(wb, `payroll-${dept}-${mon}-${yr}.xlsx`);
-                showToast('Payroll Excel downloaded successfully!');
-            } catch (e) {
-                hideLoading();
-                showToast('Error downloading payroll Excel', 'error');
             }
         }
 
@@ -2938,7 +2737,7 @@
                     } else {
                         document.getElementById('adminPassword').value = newPwd;
                     }
-                    refreshWorkerListFromMaster();
+                    rfcCCMt9jxJsDqTBXGeaCrr616tdvW3emh();
                 } else {
                     showToast(res.message || 'Error updating password', 'error');
                 }
