@@ -1518,63 +1518,150 @@ async function fetchAndCompareData() {
     
     showAccountsLoading(true);
     step4Data = [];
-    
-    // In a real app, we'd batch fetch, but here we can fetch data for the department/month/year
-    // Wait, the existing Code.gs has getStatus which we could use, or getData for specific sheets.
-    // We actually need data for ALL workers in this department for this month to compare.
-    // The current backend doesn't have a bulk fetch. We will have to fetch for each unique mapped worker.
-    
+
     const uniqueMappedNames = [...new Set(mappedStep2.map(m => m.name))];
-    
+    const allDeptWorkers = masterList[dept] ? masterList[dept].map(w => w.name || w) : [];
+    const workersToProcess = [...new Set([...allDeptWorkers, ...uniqueMappedNames])];
+
     try {
-        let backendData = []; // flattened array of {name, date, tsNumber}
-        
-        for (const worker of uniqueMappedNames) {
-            const sheetName = `${worker}-${month}-${year}`;
-            const url = `${SCRIPT_URL}?action=getData&department=${encodeURIComponent(dept)}&monthYear=${encodeURIComponent(month + ' ' + year)}&sheetName=${encodeURIComponent(sheetName)}`;
-            
-            const res = await fetch(url);
-            const result = await res.json();
-            
-            if(result.status === 'success' && result.data) {
-                // Find timesheet numbers. In existing app, 'clientIn'/'clientOut' are used.
-                // Wait, in Code.gs, how is Timesheet Number stored?
-                // The frontend has "Client Timesheet IN" and "Client Timesheet OUT" (maybe these are time fields?).
-                // Where is TIMESHEET NUMBER? The original app didn't explicitly have it. 
-                // Let's assume 'remarks' or 'clientIn' might hold it, or it's a new field.
-                // Since this is a new portal mapping, we'll try to find it in the data or just compare dates.
-                // For this demo, let's assume `remarks` holds the timesheet number if it's there.
-                
-                result.data.forEach(r => {
-                    backendData.push({
-                        name: r.name,
-                        date: r.date,
-                        tsNumber: r.remarks // Or wherever it's stored.
+        let backendData = [];
+
+        const DEPARTMENTS_CONFIG = {
+            'RADIOGRAPHY': [
+                { id: 'nightShiftIn' }, { id: 'nightShiftOut' }, { id: 'lunchIn' }, { id: 'lunchOut' },
+                { id: 'standBy' }, { id: 'lunchRtClient' }, { id: 'lunchRtFilms' }, { id: 'tsNumber' },
+                { id: 'loc1Client1' }, { id: 'loc1Films' }, { id: 'loc2Client2' }, { id: 'loc2Films' },
+                { id: 'loc3Client3' }, { id: 'loc3Films' }, { id: 'expF4x10' }, { id: 'expF4x15' },
+                { id: 'expF17x14' }, { id: 'expFReshoot' }, { id: 'expFTotal' }, { id: 'otLunchRt' },
+                { id: 'otSiteToSite' }, { id: 'otXrayScar' }, { id: 'otProfile' }, { id: 'timesheetOt' },
+                { id: 'sunday' }, { id: 'totalOt' }, { id: 'otRtrDrtPautAllow' }, { id: 'otRopeAllow' },
+                { id: 'otWeldtestAllow' }, { id: 'busFarw' }
+            ],
+            'DEFAULT': [
+                { id: 'clientIn' }, { id: 'clientOut' }, { id: 'tsNumber' }, { id: 'siteLoc1' },
+                { id: 'siteLoc2' }, { id: 'otHrs' }, { id: 'siteAllowanceHrs' }, { id: 'travelAllowance' },
+                { id: 'otherAllowance' }, { id: 'busAllowance' }, { id: 'remarks' }
+            ]
+        };
+        const activeCols = DEPARTMENTS_CONFIG[dept] || DEPARTMENTS_CONFIG['DEFAULT'];
+        const keys = ['name', 'date', 'day', ...activeCols.map(c => c.id)].join(',');
+
+        const url = `${SCRIPT_URL}?action=getAllData&department=${encodeURIComponent(dept)}&monthYear=${encodeURIComponent(month + ' ' + year)}&keys=${encodeURIComponent(keys)}`;
+        const res = await fetch(url);
+        const text = await res.text();
+        let result = JSON.parse(text);
+
+        if (result.status === 'success' && result.data) {
+            result.data.forEach(r => {
+                backendData.push({
+                    name: r.name || r._workerName,
+                    date: r.date,
+                    tsNumber: r.tsNumber,
+                    sheetType: r._sheetType || 'normal'
+                });
+            });
+        }
+
+        const monthMap = {
+            'January': 0, 'February': 1, 'March': 2, 'April': 3, 'May': 4, 'June': 5,
+            'July': 6, 'August': 7, 'September': 8, 'October': 9, 'November': 10, 'December': 11
+        };
+        const monthIdx = monthMap[month];
+        const numDays = new Date(year, monthIdx + 1, 0).getDate();
+
+        mappedStep2.forEach(m => {
+            m.standardDate = formatDateForCompare(m.date);
+        });
+
+        // 2. Compare for full month
+        workersToProcess.forEach(workerName => {
+            for (let d = 1; d <= numDays; d++) {
+                const dd = String(d).padStart(2, '0');
+                const mm = String(monthIdx + 1).padStart(2, '0');
+                const standardDateStr = `${dd}/${mm}/${year}`;
+
+                const shortYear = String(year).slice(-2);
+                const excelDateStr = `${d}-${month.substring(0, 3)}-${shortYear}`;
+
+                const dprsMatches = mappedStep2.filter(m => (m.name && m.name.trim().toLowerCase() === workerName.trim().toLowerCase()) && m.standardDate === standardDateStr);
+                const stsMatches = backendData.filter(b => (b.name && b.name.trim().toLowerCase() === workerName.trim().toLowerCase()) && b.date === standardDateStr);
+
+                // Collect unique non-empty timesheet numbers from DPRS (Excel upload)
+                const dprsTsList = [];
+                dprsMatches.forEach(m => {
+                    const val = String(m.tsNumber || '').trim();
+                    if (val && val !== '-' && !dprsTsList.includes(val)) {
+                        dprsTsList.push(val);
+                    }
+                });
+
+                // Collect unique non-empty timesheet numbers from STS (both accounts sheet & normal sheet)
+                const stsTsList = [];
+                stsMatches.forEach(b => {
+                    const val = String(b.tsNumber || '').trim();
+                    if (val && val !== '-' && !stsTsList.includes(val)) {
+                        stsTsList.push(val);
+                    }
+                });
+
+                const dprsTsDisplay = dprsTsList.join(', ');
+                const stsTsDisplay = stsTsList.join(' & ');
+
+                let summary = 'MISMATCHED';
+
+                const splitIntoTokens = (list) => {
+                    let tokens = [];
+                    list.forEach(ts => {
+                        const parts = String(ts).split(/[\s,&\/\\\|]+/);
+                        parts.forEach(p => {
+                            const norm = p.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+                            if (norm && !tokens.includes(norm)) tokens.push(norm);
+                        });
                     });
+                    return tokens;
+                };
+
+                const dprsTokens = splitIntoTokens(dprsTsList);
+                const stsTokens = splitIntoTokens(stsTsList);
+
+                if (dprsTokens.length > 0 || stsTokens.length > 0) {
+                    let matchedCount = 0;
+                    const remainingStsTokens = [...stsTokens];
+
+                    dprsTokens.forEach(dprsT => {
+                        const matchIndex = remainingStsTokens.findIndex(stsT => stsT === dprsT || stsT.includes(dprsT) || dprsT.includes(stsT));
+                        if (matchIndex !== -1) {
+                            matchedCount++;
+                            remainingStsTokens.splice(matchIndex, 1);
+                        }
+                    });
+
+                    let mismatchedCount = (dprsTokens.length - matchedCount) + remainingStsTokens.length;
+
+                    if (matchedCount > 0 && mismatchedCount === 0) {
+                        summary = `${matchedCount} MATCHED`;
+                    } else if (matchedCount > 0 && mismatchedCount > 0) {
+                        summary = `${matchedCount} MATCHED, ${mismatchedCount} MISMATCHED`;
+                    } else {
+                        summary = `${mismatchedCount} MISMATCHED`;
+                    }
+                } else {
+                    summary = 'MISMATCHED';
+                }
+
+                step4Data.push({
+                    NAME: workerName,
+                    DATE: excelDateStr,
+                    DPRS_TS: dprsTsDisplay,
+                    STS_TS: stsTsDisplay,
+                    SUMMARY: summary
                 });
             }
-        }
-        
-        // 2. Compare
-        mappedStep2.forEach(m => {
-            const dateStr = formatDateForCompare(m.date); // Need to parse excel date
-            // Find in backend
-            const beMatch = backendData.find(b => b.name === m.name && b.date === dateStr);
-            const beTs = beMatch ? (beMatch.tsNumber || 'Not Entered') : 'Not Found';
-            const matched = beMatch && (beMatch.tsNumber == m.tsNumber);
-            
-            step4Data.push({
-                NAME: m.name,
-                DATE: dateStr,
-                DPRS_TS: m.tsNumber,
-                STS_TS: beTs,
-                SUMMARY: matched ? 'matched' : 'mismatched'
-            });
         });
-        
+
         renderStep4Table();
-        
-    } catch(e) {
+
+    } catch (e) {
         alert('Error fetching backend data for comparison.');
         console.error(e);
     }
@@ -1585,11 +1672,11 @@ function formatDateForCompare(excelDateStr) {
     // If it's already a string like "1-May-26" try to convert to DD/MM/YYYY matching the main portal
     try {
         const d = new Date(excelDateStr);
-        if(isNaN(d.getTime())) return excelDateStr; // Return as is if unparseable
+        if (isNaN(d.getTime())) return excelDateStr; // Return as is if unparseable
         const dd = String(d.getDate()).padStart(2, '0');
         const mm = String(d.getMonth() + 1).padStart(2, '0');
         return `${dd}/${mm}/${d.getFullYear()}`;
-    } catch(e) {
+    } catch (e) {
         return excelDateStr;
     }
 }
@@ -1597,11 +1684,12 @@ function formatDateForCompare(excelDateStr) {
 function renderStep4Table() {
     const tbody = document.querySelector('#step4Table tbody');
     tbody.innerHTML = '';
-    
+
     step4Data.forEach(row => {
         const tr = document.createElement('tr');
-        const isMatched = row.SUMMARY === 'matched';
-        
+        const summaryUpper = (row.SUMMARY || '').toUpperCase();
+        const isMatched = summaryUpper.includes('MATCHED') && !summaryUpper.includes('MISMATCHED');
+
         tr.innerHTML = `
             <td>${row.NAME}</td>
             <td>${row.DATE}</td>
