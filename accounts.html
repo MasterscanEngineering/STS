@@ -968,6 +968,56 @@
             vertical-align: middle;
         }
 
+        .col-date {
+            width: 90px;
+            min-width: 90px;
+        }
+
+        .col-day {
+            width: 95px;
+            min-width: 95px;
+        }
+
+        .col-time-wide {
+            width: 110px;
+            min-width: 110px;
+        }
+
+        .col-location {
+            width: 130px;
+            min-width: 130px;
+        }
+
+        .col-number {
+            width: 75px;
+            min-width: 75px;
+        }
+
+        .col-number-wide {
+            width: 130px;
+            min-width: 130px;
+        }
+
+        .col-allowance {
+            width: 110px;
+            min-width: 110px;
+        }
+
+        .col-remarks {
+            width: 140px;
+            min-width: 140px;
+        }
+
+        .col-dprs-ts {
+            width: 170px !important;
+            min-width: 170px !important;
+        }
+
+        .col-recon-summary {
+            width: 230px !important;
+            min-width: 230px !important;
+        }
+
         .spreadsheet td input,
         .spreadsheet td select {
             width: 100%;
@@ -979,6 +1029,7 @@
             font-size: 0.82rem;
             text-align: center;
             outline: none;
+            box-sizing: border-box;
         }
 
         .spreadsheet td input:focus,
@@ -1001,6 +1052,55 @@
 
         .spreadsheet tbody tr.row-saturday {
             background: var(--saturday-bg);
+        }
+
+        /* Reconciliation Matching Row Colors */
+        .spreadsheet tbody tr.row-match-green {
+            background: #dcfce7 !important;
+            border-left: 5px solid #15803d !important;
+        }
+
+        .spreadsheet tbody tr.row-match-green td {
+            background: #dcfce7 !important;
+            color: #14532d !important;
+        }
+
+        .spreadsheet tbody tr.row-match-green input {
+            background: #f0fdf4 !important;
+            color: #14532d !important;
+            font-weight: 700 !important;
+        }
+
+        .spreadsheet tbody tr.row-match-red {
+            background: #fee2e2 !important;
+            border-left: 5px solid #dc2626 !important;
+        }
+
+        .spreadsheet tbody tr.row-match-red td {
+            background: #fee2e2 !important;
+            color: #991b1b !important;
+        }
+
+        .spreadsheet tbody tr.row-match-red input {
+            background: #fef2f2 !important;
+            color: #b91c1c !important;
+            font-weight: 700 !important;
+        }
+
+        .spreadsheet tbody tr.row-match-blue {
+            background: #e0f2fe !important;
+            border-left: 5px solid #0284c7 !important;
+        }
+
+        .spreadsheet tbody tr.row-match-blue td {
+            background: #e0f2fe !important;
+            color: #0369a1 !important;
+        }
+
+        .spreadsheet tbody tr.row-match-blue input {
+            background: #f0f9ff !important;
+            color: #0284c7 !important;
+            font-weight: 700 !important;
         }
 
         .spreadsheet tfoot {
@@ -1299,11 +1399,11 @@
                     <div class="app-subtitle">Salary Timesheet Submission & Reconciliation</div>
                 </div>
             </div>
-            <div class="current-timestamp" id="currentDateTime"></div>
             <div class="nav-tabs" id="mainNavTabs">
                 <button class="nav-btn active" onclick="showPortalSection('home')">Home</button>
                 <button class="nav-btn" id="btnAdminNav" onclick="toggleAdminLogin()">Supervisor Portal</button>
                 <button class="nav-btn" onclick="showStatusModal()">Submission Status</button>
+                <button class="nav-btn" id="btnNavPayroll" onclick="openPayrollModal()">View Payroll</button>
                 <button class="nav-btn nav-btn-logout" onclick="accountsLogout()">Accounts Portal Logout</button>
             </div>
         </div>
@@ -1689,19 +1789,42 @@
                                 <p style="color: var(--text-secondary);">Verify matches or edit extracted names
                                     directly.</p>
                             </div>
-                            <div style="display: flex; gap: 10px;">
+                            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
                                 <button class="btn-back" onclick="goToStep(2)">&larr; Back</button>
+                                <button id="btnStep3Undo" class="btn-back" onclick="undoStep3()" disabled
+                                    title="Undo (Ctrl+Z)"
+                                    style="display: inline-flex; align-items: center; gap: 6px; opacity: 0.5; cursor: not-allowed; transition: all 0.2s ease;">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M3 7v6h6" />
+                                        <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13" />
+                                    </svg>
+                                    Undo
+                                </button>
+                                <button id="btnStep3Redo" class="btn-back" onclick="redoStep3()" disabled
+                                    title="Redo (Ctrl+Y)"
+                                    style="display: inline-flex; align-items: center; gap: 6px; opacity: 0.5; cursor: not-allowed; transition: all 0.2s ease;">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M21 7v6h-6" />
+                                        <path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13" />
+                                    </svg>
+                                    Redo
+                                </button>
                                 <button class="btn-back" onclick="downloadExcelStep3()">Download Step 3 Excel</button>
                                 <button class="btn-submit" onclick="proceedToStep4()">Next: Compare Data &rarr;</button>
                             </div>
                         </div>
-                        <div class="table-container">
-                            <table id="step3Table">
+                        <div class="table-container" style="overflow-x: auto; max-height: calc(85vh - 200px);">
+                            <table id="step3Table" style="min-width: 950px; width: 100%; border-collapse: collapse;">
                                 <thead>
                                     <tr>
-                                        <th>Extracted Technician (Editable)</th>
-                                        <th>Matched Master Worker</th>
-                                        <th>Timesheet Numbers</th>
+                                        <th style="width: 50px; text-align: center;">✕</th>
+                                        <th style="min-width: 250px; width: 280px; text-align: left;">Extracted
+                                            Technician (Editable)</th>
+                                        <th style="min-width: 380px; width: 420px; text-align: left;">Matched Master
+                                            Worker</th>
+                                        <th style="min-width: 300px; text-align: left;">Timesheet Numbers</th>
                                     </tr>
                                 </thead>
                                 <tbody></tbody>
@@ -1910,53 +2033,101 @@
 
     <!-- Status Modal -->
     <div id="statusModal" class="modal">
-        <div class="modal-content" style="max-width: 800px;">
+        <div class="modal-content" style="max-width: 850px; width: 95vw;">
             <div
-                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
                 <div>
-                    <h3 style="font-size: 1.25rem;">Submission Status</h3>
-                    <p id="statusSubtitle" style="color: var(--text-secondary); font-size: 0.9rem;"></p>
+                    <h3 style="font-size: 1.25rem; font-weight: 800; color: #1e293b; margin: 0;">Submission Status</h3>
+                    <p id="statusSubtitle" style="color: var(--text-secondary); font-size: 0.88rem; margin: 2px 0 0 0;">
+                    </p>
                 </div>
                 <div style="display: flex; gap: 8px; align-items: center;">
-                    <button id="btnViewPayrollStatus" class="btn-submit"
-                        style="background: #4361ee; font-size: 0.8rem; padding: 6px 14px; display: none;"
-                        onclick="openPayrollModal()">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2.5">
-                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                            <circle cx="12" cy="12" r="3"></circle>
-                        </svg>
-                        View Payroll
-                    </button>
-                    <button id="btnDownloadPayrollStatus" class="btn-submit"
-                        style="background: #10b981; border-color: #10b981; font-size: 0.8rem; padding: 6px 14px; display: none;"
-                        onclick="downloadPayrollExcel()">
+                    <button id="btnDownloadStatusExcel" class="btn-submit"
+                        style="background: #10b981; border-color: #10b981; font-size: 0.8rem; padding: 6px 14px;"
+                        onclick="downloadStatusExcel()">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2.5">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                             <polyline points="7 10 12 15 17 10"></polyline>
                             <line x1="12" y1="15" x2="12" y2="3"></line>
                         </svg>
-                        Download Payroll Excel
+                        Download Excel
                     </button>
                     <button class="btn-back" style="font-size: 0.8rem; padding: 6px 14px;"
                         onclick="closeModal('statusModal')">Close</button>
                 </div>
             </div>
+
+            <!-- Summary Counts Comment Banner -->
+            <div id="statusSummaryBanner"
+                style="display: flex; align-items: center; justify-content: space-between; gap: 12px; background: #f8fafc; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 16px; margin-bottom: 16px; flex-wrap: wrap;">
+                <div style="font-size: 0.88rem; font-weight: 700; color: #1e293b;">
+                    Summary:
+                </div>
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <span
+                        style="background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; padding: 4px 12px; border-radius: 20px; font-size: 0.82rem; font-weight: 700;">
+                        Pending: <strong id="statusPendingCount">0</strong>
+                    </span>
+                    <span
+                        style="background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; padding: 4px 12px; border-radius: 20px; font-size: 0.82rem; font-weight: 700;">
+                        Submitted: <strong id="statusSubmittedCount">0</strong>
+                    </span>
+                    <span
+                        style="background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; padding: 4px 12px; border-radius: 20px; font-size: 0.82rem; font-weight: 700;">
+                        Verified: <strong id="statusVerifiedCount">0</strong>
+                    </span>
+                </div>
+            </div>
+
             <div id="statusListContent"></div>
         </div>
     </div>
 
     <!-- Payroll Modal -->
     <div id="payrollModal" class="modal">
-        <div class="modal-content" style="max-width: 95vw; width: 1400px; max-height: 90vh;">
+        <div class="modal-content" style="max-width: 96vw; width: 1550px; max-height: 92vh;">
             <div
-                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; flex-wrap: wrap; gap: 10px;">
-                <div>
-                    <h3 style="font-size: 1.3rem; font-weight: 800; color: #1e293b;">Payroll Sheet</h3>
-                    <p id="payrollSubtitle" style="color: var(--text-secondary); font-size: 0.85rem;"></p>
+                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; flex-wrap: wrap; gap: 12px;">
+                <div style="display: flex; align-items: center; gap: 18px; flex-wrap: wrap;">
+                    <div>
+                        <h3 style="font-size: 1.3rem; font-weight: 800; color: #1e293b; margin: 0;">Payroll Sheet</h3>
+                        <p id="payrollSubtitle"
+                            style="color: var(--text-secondary); font-size: 0.85rem; margin: 2px 0 0 0;"></p>
+                    </div>
+                    <div
+                        style="display: flex; align-items: center; gap: 8px; background: #f8fafc; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border-color);">
+                        <label style="font-size: 0.8rem; font-weight: 700; color: #475569;">Dept:</label>
+                        <select id="payrollDeptFilter" onchange="onPayrollFilterChange()"
+                            style="padding: 4px 8px; font-size: 0.82rem; font-weight: 600; border-radius: 4px; border: 1px solid #cbd5e1; outline: none; background: white;">
+                            <option value="All">All Departments</option>
+                        </select>
+
+                        <label
+                            style="font-size: 0.8rem; font-weight: 700; color: #475569; margin-left: 6px;">Month:</label>
+                        <select id="payrollMonthFilter" onchange="reloadPayrollData()"
+                            style="padding: 4px 8px; font-size: 0.82rem; font-weight: 600; border-radius: 4px; border: 1px solid #cbd5e1; outline: none; background: white;">
+                            <option value="January">January</option>
+                            <option value="February">February</option>
+                            <option value="March">March</option>
+                            <option value="April">April</option>
+                            <option value="May">May</option>
+                            <option value="June">June</option>
+                            <option value="July">July</option>
+                            <option value="August">August</option>
+                            <option value="September">September</option>
+                            <option value="October">October</option>
+                            <option value="November">November</option>
+                            <option value="December">December</option>
+                        </select>
+
+                        <label
+                            style="font-size: 0.8rem; font-weight: 700; color: #475569; margin-left: 6px;">Year:</label>
+                        <input type="number" id="payrollYearFilter" onchange="reloadPayrollData()" min="1900" max="3000"
+                            style="width: 70px; padding: 4px 6px; font-size: 0.82rem; font-weight: 600; border-radius: 4px; border: 1px solid #cbd5e1; outline: none; background: white;">
+                    </div>
                 </div>
-                <div style="display: flex; gap: 10px;">
+                <div style="display: flex; gap: 10px; align-items: center;">
                     <button class="btn-submit"
                         style="background: #10b981; border-color: #10b981; font-size: 0.82rem; padding: 6px 14px;"
                         onclick="downloadPayrollExcel()">
@@ -2039,7 +2210,7 @@
             setDefaultMonthYear();
             updateClock();
             setInterval(updateClock, 60000);
-            rfcCCMt9jxJsDqTBXGeaCrr616tdvW3emh();
+            9q2Vy1qVTYmbVYdxYXUbAMz3jnk4Rp41c1e19z8EnsTy();
             checkAccountsAuth();
 
             // Set up exit modal handlers
@@ -2247,7 +2418,7 @@
         let currentAdminUser = null;
 
         // ===== MASTER LIST & DROPDOWNS =====
-        async function rfcCCMt9jxJsDqTBXGeaCrr616tdvW3emh() {
+        async function 9q2Vy1qVTYmbVYdxYXUbAMz3jnk4Rp41c1e19z8EnsTy() {
             try {
                 const res = await fetch(`${SCRIPT_URL}?action=getWorkerList`).then(r => r.json());
                 if (res.status === 'success') {
@@ -2515,7 +2686,7 @@
                 if (res.status === 'success') {
                     showToast('Password updated successfully!');
                     closeModal('changePasswordModal');
-                    rfcCCMt9jxJsDqTBXGeaCrr616tdvW3emh();
+                    9q2Vy1qVTYmbVYdxYXUbAMz3jnk4Rp41c1e19z8EnsTy();
                 } else {
                     showToast(res.message || 'Error updating password', 'error');
                 }
@@ -2556,34 +2727,130 @@
         }
 
         // ===== STATUS MODAL =====
-        async function showStatusModal() {
-            const dept = document.getElementById('departmentSelect').value;
-            const mon = document.getElementById('monthSelect').value;
-            const yr = document.getElementById('yearSelect').value;
-            if (!dept) { showToast('Select Department first', 'error'); return; }
+        let currentStatusData = [];
+        let currentStatusDept = '';
+        let currentStatusMonth = '';
+        let currentStatusYear = '';
 
-            const btnViewPayroll = document.getElementById('btnViewPayrollStatus');
-            const btnDownloadPayroll = document.getElementById('btnDownloadPayrollStatus');
-            if (btnViewPayroll) btnViewPayroll.style.display = isAdmin ? 'inline-flex' : 'none';
-            if (btnDownloadPayroll) btnDownloadPayroll.style.display = isAdmin ? 'inline-flex' : 'none';
+        async function showStatusModal() {
+            const deptEl = document.getElementById('departmentSelect');
+            const monEl = document.getElementById('monthSelect');
+            const yrEl = document.getElementById('yearSelect');
+
+            const dept = (deptEl && deptEl.value) ? deptEl.value : 'All';
+            const mon = (monEl && monEl.value) ? monEl.value : new Date().toLocaleString('en-US', { month: 'long' });
+            const yr = (yrEl && yrEl.value) ? yrEl.value : new Date().getFullYear().toString();
+
+            currentStatusDept = dept;
+            currentStatusMonth = mon;
+            currentStatusYear = yr;
 
             showLoading('Fetching status...');
-            document.getElementById('statusSubtitle').textContent = `${dept} · ${mon} ${yr}`;
+            const deptTitle = (dept === 'All') ? 'All Departments' : dept;
+            document.getElementById('statusSubtitle').textContent = `${deptTitle} · ${mon} ${yr}`;
             try {
                 const res = await fetch(`${SCRIPT_URL}?action=getStatus&department=${encodeURIComponent(dept)}&monthYear=${encodeURIComponent(mon + ' ' + yr)}`).then(r => r.json());
                 hideLoading();
                 if (res.status === 'success') {
-                    let html = '<table class="status-table"><thead><tr><th>Worker Name</th><th>Status</th><th>Action</th></tr></thead><tbody>';
-                    res.data.forEach(item => {
-                        const badgeClass = `badge-${item.status.toLowerCase()}`;
-                        let actions = `<button onclick="viewWorkerFromStatus('${item.name}')" style="background:var(--accent-primary); color:white; border:none; padding:4px 8px; border-radius:4px; font-size:0.8rem; cursor:pointer;">Open Accounts Sheet</button>`;
-                        html += `<tr><td>${item.name}</td><td><span class="badge ${badgeClass}">${item.status}</span></td><td>${actions}</td></tr>`;
+                    currentStatusData = res.data || [];
+
+                    let pendingCount = 0;
+                    let submittedCount = 0;
+                    let verifiedCount = 0;
+
+                    currentStatusData.forEach(item => {
+                        const st = (item.status || '').toLowerCase();
+                        if (st === 'pending') pendingCount++;
+                        else if (st === 'submitted') submittedCount++;
+                        else if (st === 'verified') verifiedCount++;
                     });
+
+                    document.getElementById('statusPendingCount').textContent = pendingCount;
+                    document.getElementById('statusSubmittedCount').textContent = submittedCount;
+                    document.getElementById('statusVerifiedCount').textContent = verifiedCount;
+
+                    const showDeptCol = (dept === 'All' || currentStatusData.some(d => d.department && d.department !== dept));
+
+                    let html = '<table class="status-table"><thead><tr>';
+                    if (showDeptCol) html += '<th style="text-align: left; padding: 10px 12px;">Department</th>';
+                    html += '<th style="text-align: left; padding: 10px 12px;">Worker Name</th><th>Status</th><th>Action</th></tr></thead><tbody>';
+
+                    if (currentStatusData.length === 0) {
+                        html += `<tr><td colspan="${showDeptCol ? 4 : 3}" style="text-align: center; padding: 25px; color: var(--text-secondary);">No worker records found.</td></tr>`;
+                    } else {
+                        currentStatusData.forEach(item => {
+                            const badgeClass = `badge-${(item.status || 'pending').toLowerCase()}`;
+                            const wDept = item.department || dept;
+                            let actions = `<button onclick="viewWorkerFromStatus('${item.name}', '${wDept}')" style="background:var(--accent-primary); color:white; border:none; padding:4px 10px; border-radius:4px; font-size:0.8rem; cursor:pointer;">Open Accounts Sheet</button>`;
+
+                            html += `<tr>`;
+                            if (showDeptCol) {
+                                html += `<td style="font-weight: 700; color: #334155; padding: 8px 12px;">${wDept}</td>`;
+                            }
+                            html += `<td style="padding: 8px 12px; font-weight: 600;">${item.name}</td><td><span class="badge ${badgeClass}">${item.status}</span></td><td>${actions}</td></tr>`;
+                        });
+                    }
                     html += '</tbody></table>';
                     document.getElementById('statusListContent').innerHTML = html;
                     document.getElementById('statusModal').classList.add('show');
                 }
             } catch (e) { hideLoading(); showToast('Error fetching status', 'error'); }
+        }
+
+        function viewWorkerFromStatus(name, dept) {
+            if (dept && document.getElementById('departmentSelect')) {
+                document.getElementById('departmentSelect').value = dept;
+                if (typeof loadWorkerList === 'function') loadWorkerList();
+            }
+            document.getElementById('workerSelect').value = name;
+            closeModal('statusModal');
+            if (typeof handleOpenPortal === 'function') {
+                handleOpenPortal();
+            }
+        }
+
+        function downloadStatusExcel() {
+            if (!currentStatusData || currentStatusData.length === 0) {
+                showToast('No status data to export', 'info');
+                return;
+            }
+
+            let pendingCount = 0;
+            let submittedCount = 0;
+            let verifiedCount = 0;
+
+            currentStatusData.forEach(item => {
+                const st = (item.status || '').toLowerCase();
+                if (st === 'pending') pendingCount++;
+                else if (st === 'submitted') submittedCount++;
+                else if (st === 'verified') verifiedCount++;
+            });
+
+            const deptTitle = (currentStatusDept === 'All') ? 'All Departments' : currentStatusDept;
+            const summaryComment = `pending: ${pendingCount}, submitted: ${submittedCount}, verified: ${verifiedCount}`;
+
+            // Build AoA format
+            const aoa = [
+                [`Submission Status - ${deptTitle} (${currentStatusMonth} ${currentStatusYear})`],
+                [`Summary: ${summaryComment}`],
+                [], // Empty row
+                ['Department', 'Worker Name', 'Status']
+            ];
+
+            currentStatusData.forEach(item => {
+                aoa.push([
+                    item.department || currentStatusDept,
+                    item.name,
+                    item.status
+                ]);
+            });
+
+            const ws = XLSX.utils.aoa_to_sheet(aoa);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Submission Status");
+            const fileName = `submission-status-${currentStatusDept.toLowerCase().replace(/\s+/g, '-')}-${currentStatusMonth}-${currentStatusYear}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+            showToast('Submission Status Excel downloaded successfully!');
         }
 
         async function handleResubmit(name) {
@@ -2616,30 +2883,68 @@
         }
 
         // ===== PAYROLL FUNCTIONS =====
+        let allPayrollRawData = [];
         let currentPayrollData = [];
 
-        async function openPayrollModal() {
-            if (!isAdmin) {
-                showToast('Supervisor access required', 'error');
-                return;
+        async function openPayrollModal(deptOverride) {
+            // Get selected or default month/year
+            const monEl = document.getElementById('monthSelect');
+            const yrEl = document.getElementById('yearSelect');
+            const mon = (monEl && monEl.value) ? monEl.value : new Date().toLocaleString('en-US', { month: 'long' });
+            const yr = (yrEl && yrEl.value) ? yrEl.value : new Date().getFullYear().toString();
+
+            // Populate month/year in modal controls
+            const pMonth = document.getElementById('payrollMonthFilter');
+            const pYear = document.getElementById('payrollYearFilter');
+            if (pMonth) pMonth.value = mon;
+            if (pYear) pYear.value = yr;
+
+            // Populate departments in dropdown
+            populatePayrollDeptFilter(deptOverride || 'All');
+
+            // Load data for all departments
+            await reloadPayrollData();
+            document.getElementById('payrollModal').classList.add('show');
+        }
+
+        function populatePayrollDeptFilter(selectedDept) {
+            const select = document.getElementById('payrollDeptFilter');
+            if (!select) return;
+            select.innerHTML = '<option value="All">All Departments</option>';
+
+            const depts = Object.keys(masterWorkerList || {}).filter(d => d !== 'Admin ID' && !d.toLowerCase().includes('admin') && !d.toLowerCase().includes('accounts'));
+            if (depts.length === 0 && allDepartments && allDepartments.length > 0) {
+                allDepartments.forEach(d => {
+                    if (d !== 'Admin ID' && !d.toLowerCase().includes('admin') && !d.toLowerCase().includes('accounts')) {
+                        if (!depts.includes(d)) depts.push(d);
+                    }
+                });
             }
-            const dept = document.getElementById('departmentSelect').value;
-            const mon = document.getElementById('monthSelect').value;
-            const yr = document.getElementById('yearSelect').value;
 
-            if (!dept) { showToast('Select Department first', 'error'); return; }
+            depts.forEach(d => {
+                const opt = document.createElement('option');
+                opt.value = d;
+                opt.textContent = d;
+                select.appendChild(opt);
+            });
 
-            document.getElementById('payrollSubtitle').textContent = `${dept} · ${mon} ${yr}`;
+            select.value = selectedDept || 'All';
+        }
+
+        async function reloadPayrollData() {
+            const pMonth = document.getElementById('payrollMonthFilter');
+            const pYear = document.getElementById('payrollYearFilter');
+            const mon = pMonth ? pMonth.value : document.getElementById('monthSelect').value;
+            const yr = pYear ? pYear.value : document.getElementById('yearSelect').value;
+
             showLoading('Loading Payroll data...');
-
             try {
-                const res = await fetch(`${SCRIPT_URL}?action=getPayrollData&department=${encodeURIComponent(dept)}&monthYear=${encodeURIComponent(mon + ' ' + yr)}`).then(r => r.json());
+                const res = await fetch(`${SCRIPT_URL}?action=getPayrollData&department=All&monthYear=${encodeURIComponent(mon + ' ' + yr)}`).then(r => r.json());
                 hideLoading();
 
                 if (res.status === 'success') {
-                    currentPayrollData = res.data || [];
-                    renderPayrollTable(currentPayrollData);
-                    document.getElementById('payrollModal').classList.add('show');
+                    allPayrollRawData = res.data || [];
+                    onPayrollFilterChange();
                 } else {
                     showToast(res.message || 'Error loading payroll', 'error');
                 }
@@ -2649,24 +2954,47 @@
             }
         }
 
+        function onPayrollFilterChange() {
+            const select = document.getElementById('payrollDeptFilter');
+            const deptFilter = select ? select.value : 'All';
+            const pMonth = document.getElementById('payrollMonthFilter');
+            const pYear = document.getElementById('payrollYearFilter');
+            const mon = pMonth ? pMonth.value : document.getElementById('monthSelect').value;
+            const yr = pYear ? pYear.value : document.getElementById('yearSelect').value;
+
+            document.getElementById('payrollSubtitle').textContent = deptFilter === 'All'
+                ? `All Departments · ${mon} ${yr}`
+                : `${deptFilter} · ${mon} ${yr}`;
+
+            if (deptFilter === 'All') {
+                currentPayrollData = allPayrollRawData.map(r => [...r]);
+            } else {
+                currentPayrollData = allPayrollRawData
+                    .filter(r => String(r[0] || '').trim().toLowerCase() === deptFilter.trim().toLowerCase())
+                    .map(r => [...r]);
+            }
+
+            renderPayrollTable(currentPayrollData);
+        }
+
         function renderPayrollTable(data) {
             const thead = document.getElementById('payrollTableHead');
             const tbody = document.getElementById('payrollTableBody');
 
-            const headers1 = ['EmplID', 'Name', 'WorkedDays', 'OTHoursPrev', 'ExitFlag', 'AlsoPayCurrentOT', 'OTHoursCurrentExit', 'Bus Fare', 'Transport', 'Film Allowance', 'Project Allowance', 'AdvanceDeducted', 'OtherDeductionManual', 'Notes'];
-            const colWidths = [65, 270, 95, 105, 80, 130, 140, 85, 85, 110, 125, 130, 160, 180];
+            const headers1 = ['Department', 'EmplID', 'Name', 'WorkedDays', 'OTHoursPrev', 'ExitFlag', 'AlsoPayCurrentOT', 'OTHoursCurrentExit', 'Bus Fare', 'Transport', 'Film Allowance', 'Project Allowance', 'AdvanceDeducted', 'OtherDeductionManual', 'Notes'];
+            const colWidths = [120, 60, 240, 95, 105, 80, 130, 140, 85, 85, 110, 125, 130, 160, 180];
 
             let thHtml = '<tr style="background: #1e293b; color: white;">';
             headers1.forEach((h, i) => {
-                const align = (i === 1) ? 'left' : 'center';
-                const padding = (i === 1) ? '10px 14px' : '10px 8px';
-                thHtml += `<th style="padding: ${padding}; border: 1px solid #334155; text-align: ${align}; white-space: nowrap; min-width: ${colWidths[i]}px; width: ${colWidths[i]}px; font-size: 0.82rem;">${h}</th>`;
+                const align = (i === 0 || i === 2) ? 'left' : 'center';
+                const padding = (i === 0 || i === 2) ? '10px 12px' : '10px 6px';
+                thHtml += `<th style="padding: ${padding}; border: 1px solid #334155; text-align: ${align}; white-space: nowrap; min-width: ${colWidths[i]}px; width: ${colWidths[i]}px; font-size: 0.82rem; font-weight: 700;">${h}</th>`;
             });
             thHtml += '</tr>';
             thead.innerHTML = thHtml;
 
             if (!data || data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="${headers1.length}" style="text-align: center; padding: 25px; color: var(--text-secondary);">No verified worker records found in Payroll for this month. Once admin verifies workers, their payroll summaries will appear here.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="${headers1.length}" style="text-align: center; padding: 25px; color: var(--text-secondary); font-size: 0.9rem;">No worker records found in Payroll for this month. Once workers submit timesheets and admin verifies them, their payroll summaries will appear here.</td></tr>`;
                 return;
             }
 
@@ -2674,15 +3002,18 @@
             data.forEach((row, rIdx) => {
                 tbHtml += `<tr style="border-bottom: 1px solid var(--border-color);">`;
                 row.forEach((cellVal, cIdx) => {
-                    const isReadOnly = (cIdx === 0 || cIdx === 1);
+                    const isReadOnly = (cIdx === 0 || cIdx === 1 || cIdx === 2);
                     const val = cellVal !== undefined && cellVal !== null ? cellVal : '';
-                    const align = (cIdx === 1) ? 'left' : 'center';
-                    const padding = (cIdx === 1) ? '7px 12px' : '7px 8px';
-                    const fontWeight = (cIdx === 1) ? '600' : 'normal';
+                    const align = (cIdx === 0 || cIdx === 2) ? 'left' : 'center';
+                    const padding = (cIdx === 0 || cIdx === 2) ? '7px 10px' : '7px 6px';
+                    const fontWeight = (cIdx === 0 || cIdx === 2) ? '700' : 'normal';
+                    const bg = (cIdx === 0) ? '#f1f5f9' : (cIdx === 1 || cIdx === 2) ? '#f8fafc' : 'white';
+                    const color = (cIdx === 0) ? '#334155' : '#1e293b';
+
                     tbHtml += `
                         <td style="padding: 2px; border: 1px solid var(--border-color); vertical-align: middle; min-width: ${colWidths[cIdx]}px; width: ${colWidths[cIdx]}px;">
                             <input type="text" value="${val}" title="${val}" ${isReadOnly ? 'readonly' : ''} 
-                                style="width: 100%; border: none; background: ${isReadOnly ? '#f8fafc' : 'white'}; padding: ${padding}; font-size: 0.83rem; font-weight: ${fontWeight}; text-align: ${align}; outline: none; white-space: nowrap; color: #1e293b;"
+                                style="width: 100%; border: none; background: ${bg}; padding: ${padding}; font-size: 0.82rem; font-weight: ${fontWeight}; text-align: ${align}; outline: none; white-space: nowrap; color: ${color};"
                                 onchange="updatePayrollCell(${rIdx}, ${cIdx}, this.value)">
                         </td>
                     `;
@@ -2695,15 +3026,29 @@
         function updatePayrollCell(rIdx, cIdx, val) {
             if (currentPayrollData[rIdx]) {
                 currentPayrollData[rIdx][cIdx] = val;
+                const dept = currentPayrollData[rIdx][0];
+                const name = currentPayrollData[rIdx][2];
+
+                // Sync with allPayrollRawData
+                const rawRow = allPayrollRawData.find(r =>
+                    String(r[0] || '').trim().toLowerCase() === String(dept || '').trim().toLowerCase() &&
+                    String(r[2] || '').trim().toLowerCase() === String(name || '').trim().toLowerCase()
+                );
+                if (rawRow) {
+                    rawRow[cIdx] = val;
+                }
             }
         }
 
         async function savePayrollData() {
-            const dept = document.getElementById('departmentSelect').value;
-            const mon = document.getElementById('monthSelect').value;
-            const yr = document.getElementById('yearSelect').value;
+            const pMonth = document.getElementById('payrollMonthFilter');
+            const pYear = document.getElementById('payrollYearFilter');
+            const mon = pMonth ? pMonth.value : document.getElementById('monthSelect').value;
+            const yr = pYear ? pYear.value : document.getElementById('yearSelect').value;
+            const select = document.getElementById('payrollDeptFilter');
+            const deptFilter = select ? select.value : 'All';
 
-            if (!currentPayrollData || currentPayrollData.length === 0) {
+            if (!allPayrollRawData || allPayrollRawData.length === 0) {
                 showToast('No payroll records to save', 'info');
                 return;
             }
@@ -2714,9 +3059,9 @@
                     method: 'POST',
                     body: JSON.stringify({
                         action: 'savePayrollData',
-                        department: dept,
+                        department: deptFilter,
                         monthYear: `${mon} ${yr}`,
-                        data: currentPayrollData
+                        data: allPayrollRawData
                     })
                 }).then(r => r.json());
 
@@ -2733,21 +3078,18 @@
         }
 
         async function downloadPayrollExcel() {
-            if (!isAdmin) {
-                showToast('Supervisor access required', 'error');
-                return;
-            }
-            const dept = document.getElementById('departmentSelect').value;
-            const mon = document.getElementById('monthSelect').value;
-            const yr = document.getElementById('yearSelect').value;
-
-            if (!dept) { showToast('Select Department first', 'error'); return; }
+            const pMonth = document.getElementById('payrollMonthFilter');
+            const pYear = document.getElementById('payrollYearFilter');
+            const mon = pMonth ? pMonth.value : document.getElementById('monthSelect').value;
+            const yr = pYear ? pYear.value : document.getElementById('yearSelect').value;
+            const select = document.getElementById('payrollDeptFilter');
+            const deptFilter = select ? select.value : 'All';
 
             showLoading('Preparing Payroll Excel...');
             try {
                 let dataToExport = currentPayrollData;
                 if (!dataToExport || dataToExport.length === 0) {
-                    const res = await fetch(`${SCRIPT_URL}?action=getPayrollData&department=${encodeURIComponent(dept)}&monthYear=${encodeURIComponent(mon + ' ' + yr)}`).then(r => r.json());
+                    const res = await fetch(`${SCRIPT_URL}?action=getPayrollData&department=${encodeURIComponent(deptFilter)}&monthYear=${encodeURIComponent(mon + ' ' + yr)}`).then(r => r.json());
                     if (res.status === 'success') {
                         dataToExport = res.data || [];
                     }
@@ -2759,14 +3101,15 @@
                     return;
                 }
 
-                const headers1 = ['EmplID', 'Name', 'WorkedDays', 'OTHoursPrev', 'ExitFlag', 'AlsoPayCurrentOT', 'OTHoursCurrentExit', 'Bus Fare', 'Transport', 'Film Allowance', 'Project Allowance', 'AdvanceDeducted', 'OtherDeductionManual', 'Notes'];
+                const headers1 = ['Department', 'EmplID', 'Name', 'WorkedDays', 'OTHoursPrev', 'ExitFlag', 'AlsoPayCurrentOT', 'OTHoursCurrentExit', 'Bus Fare', 'Transport', 'Film Allowance', 'Project Allowance', 'AdvanceDeducted', 'OtherDeductionManual', 'Notes'];
 
                 const aoa = [headers1, ...dataToExport];
 
                 const ws = XLSX.utils.aoa_to_sheet(aoa);
                 const wb = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(wb, ws, "Payroll");
-                XLSX.writeFile(wb, `payroll-${dept}-${mon}-${yr}.xlsx`);
+                const fileName = `payroll-${deptFilter === 'All' ? 'all-departments' : deptFilter}-${mon}-${yr}.xlsx`;
+                XLSX.writeFile(wb, fileName);
                 showToast('Payroll Excel downloaded successfully!');
             } catch (e) {
                 hideLoading();
@@ -2837,6 +3180,17 @@
                 const url = `${SCRIPT_URL}?action=getData&department=${encodeURIComponent(dept)}&monthYear=${encodeURIComponent(currentMonth + ' ' + currentYear)}&sheetName=${encodeURIComponent(sheetName)}&keys=${encodeURIComponent(keys)}&isAccountsPortal=true`;
                 const res = await fetch(url).then(r => r.json());
 
+                // Cache reconciliation data from server if present
+                if (res && res.reconciliation && Array.isArray(res.reconciliation) && res.reconciliation.length > 0) {
+                    try {
+                        const existingStr = localStorage.getItem(`accountsRecon_${dept}_${currentMonth}_${currentYear}`);
+                        let existing = existingStr ? JSON.parse(existingStr) : [];
+                        const otherWorkers = existing.filter(r => (r.NAME || '').trim().toLowerCase() !== name.toLowerCase());
+                        const merged = [...otherWorkers, ...res.reconciliation];
+                        localStorage.setItem(`accountsRecon_${dept}_${currentMonth}_${currentYear}`, JSON.stringify(merged));
+                    } catch (e) { }
+                }
+
                 isLocked = false;
                 currentData = res.data || [];
                 buildSpreadsheet(currentData);
@@ -2894,7 +3248,9 @@
                 { id: 'otRtrDrtPautAllow', label: 'RTR/DRT/PAUT ALLOWANCE', topLabel: 'RTR/DRT/PAUT ALLOWANCE', type: 'number', width: 'col-allowance', sum: true, prefix: '$' },
                 { id: 'otRopeAllow', label: 'ROPE ALLOWANCE', topLabel: 'ROPE ALLOWANCE', type: 'number', width: 'col-allowance', sum: true, prefix: '$' },
                 { id: 'otWeldtestAllow', label: 'WELDTEST ALLOWANCE', topLabel: 'WELDTEST ALLOWANCE', type: 'number', width: 'col-allowance', sum: true, prefix: '$' },
-                { id: 'busFarw', label: 'BUS FARE', topLabel: 'BUS FARE', type: 'number', width: 'col-allowance', sum: true, prefix: '$' }
+                { id: 'busFarw', label: 'BUS FARE', topLabel: 'BUS FARE', type: 'number', width: 'col-allowance', sum: true, prefix: '$' },
+                { id: 'dprsTsNumber', label: 'DPRS TIMESHEET', topLabel: 'DPRS TIMESHEET', type: 'text', width: 'col-dprs-ts' },
+                { id: 'reconSummary', label: 'SUMMARY', topLabel: 'SUMMARY', type: 'text', width: 'col-recon-summary' }
             ],
             'DEFAULT': [
                 { id: 'clientIn', label: 'IN', topLabel: 'CLIENT TIMESHEET', type: 'time', width: 'col-time-wide' },
@@ -2907,11 +3263,48 @@
                 { id: 'travelAllowance', label: 'TRAVEL ALLOWANCE', topLabel: 'TRAVEL ALLOWANCE', type: 'number', width: 'col-allowance', sum: true, prefix: '$' },
                 { id: 'otherAllowance', label: 'OTHER ALLOWANCE', topLabel: 'OTHER ALLOWANCE', type: 'number', width: 'col-allowance', sum: true, prefix: '$' },
                 { id: 'busAllowance', label: 'BUS ALLOWANCE', topLabel: 'BUS ALLOWANCE', type: 'number', width: 'col-allowance', sum: true, prefix: '$' },
-                { id: 'remarks', label: 'REMARKS', topLabel: 'REMARKS', type: 'text', width: 'col-remarks' }
+                { id: 'remarks', label: 'REMARKS', topLabel: 'REMARKS', type: 'text', width: 'col-remarks' },
+                { id: 'dprsTsNumber', label: 'DPRS TIMESHEET', topLabel: 'DPRS TIMESHEET', type: 'text', width: 'col-dprs-ts' },
+                { id: 'reconSummary', label: 'SUMMARY', topLabel: 'SUMMARY', type: 'text', width: 'col-recon-summary' }
             ]
         };
 
         function getActiveColumns() { return DEPARTMENTS_CONFIG[currentDepartment] || DEPARTMENTS_CONFIG['DEFAULT']; }
+
+        function normalizeDateForMatch(dStr) {
+            if (!dStr) return '';
+            const str = String(dStr).trim();
+            const m1 = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+            if (m1) {
+                const day = parseInt(m1[1], 10);
+                const month = parseInt(m1[2], 10);
+                let year = parseInt(m1[3], 10);
+                if (year < 100) year += 2000;
+                return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
+            }
+            try {
+                const d = new Date(str);
+                if (!isNaN(d.getTime())) {
+                    const day = String(d.getDate()).padStart(2, '0');
+                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                    return `${day}/${month}/${d.getFullYear()}`;
+                }
+            } catch (e) { }
+            return str;
+        }
+
+        function getAccountsReconData(dept, month, year) {
+            const key = `accountsRecon_${dept}_${month}_${year}`;
+            const str = localStorage.getItem(key);
+            if (str) {
+                try {
+                    return JSON.parse(str);
+                } catch (e) {
+                    return [];
+                }
+            }
+            return [];
+        }
 
         function buildSpreadsheet(data) {
             const table = document.getElementById('spreadsheetTable');
@@ -2946,16 +3339,31 @@
             });
             if (currentGroup) groupedHeaders.push(currentGroup);
 
-            let theadHtml = `<tr><th rowspan="2" class="col-date">Date</th><th rowspan="2" class="col-day">Day</th>`;
+            let theadRow1 = `<tr><th rowspan="2" class="col-date">Date</th><th rowspan="2" class="col-day">Day</th>`;
+            let theadRow2Sub = '';
+
             groupedHeaders.forEach(g => {
-                theadHtml += `<th colspan="${g.colspan}">${g.name}</th>`;
+                if (g.colspan === 1 && (g.cols[0].topLabel === g.cols[0].label || !g.cols[0].topLabel)) {
+                    // Single column with identical top and sub label -> show once spanning 2 rows
+                    theadRow1 += `<th rowspan="2" class="${g.cols[0].width}">${g.name}</th>`;
+                } else {
+                    // Multi-column or distinct sublabel -> group header on row 1, individual column headers on row 2
+                    theadRow1 += `<th colspan="${g.colspan}">${g.name}</th>`;
+                    g.cols.forEach(col => {
+                        theadRow2Sub += `<th class="th-sub ${col.width}">${col.label}</th>`;
+                    });
+                }
             });
-            theadHtml += `</tr><tr>`;
-            activeCols.forEach(col => {
-                theadHtml += `<th class="th-sub ${col.width}">${col.label}</th>`;
-            });
-            theadHtml += `</tr>`;
+
+            theadRow1 += `</tr>`;
+            let theadHtml = theadRow1;
+            if (theadRow2Sub !== '') {
+                theadHtml += `<tr>${theadRow2Sub}</tr>`;
+            }
             table.querySelector('thead').innerHTML = theadHtml;
+
+            // Load reconciliation data for current worker & month
+            const reconList = getAccountsReconData(currentDepartment, currentMonth, currentYear);
 
             let tbodyHtml = '';
             const mIdx = getMonthIndex(currentMonth);
@@ -2966,6 +3374,34 @@
                 let rowClass = dayName === 'SUNDAY' ? 'row-sunday' : (dayName === 'SATURDAY' ? 'row-saturday' : '');
 
                 let rowData = (data || []).find(r => r.date === dStr) || {};
+
+                // Match with DPRS reconciliation data if available
+                const reconItem = reconList.find(r => {
+                    const nameMatches = r.NAME && currentWorker && r.NAME.trim().toLowerCase() === currentWorker.trim().toLowerCase();
+                    const dateMatches = normalizeDateForMatch(r.DATE) === normalizeDateForMatch(dStr);
+                    return nameMatches && dateMatches;
+                });
+
+                if (reconItem) {
+                    if (rowData['dprsTsNumber'] === undefined || rowData['dprsTsNumber'] === '') {
+                        rowData['dprsTsNumber'] = reconItem.DPRS_TS || '';
+                    }
+                    if (rowData['reconSummary'] === undefined || rowData['reconSummary'] === '') {
+                        rowData['reconSummary'] = reconItem.SUMMARY || '';
+                    }
+
+                    const sumUpper = (reconItem.SUMMARY || '').toUpperCase().trim();
+                    const hasMatch = /\bMATCHED\b/.test(sumUpper.replace(/MISMATCHED/g, '')) || /\b\d+\s*MATCHED\b/.test(sumUpper.replace(/\d+\s*MISMATCHED/g, ''));
+                    const hasMismatch = sumUpper.includes('MISMATCHED');
+
+                    if (hasMatch && hasMismatch) {
+                        rowClass += ' row-match-blue';
+                    } else if (hasMatch) {
+                        rowClass += ' row-match-green';
+                    } else if (hasMismatch) {
+                        rowClass += ' row-match-red';
+                    }
+                }
 
                 tbodyHtml += `<tr class="${rowClass}"><td class="cell-date">${dStr}</td><td class="cell-day">${dayName}</td>`;
                 activeCols.forEach(col => {
@@ -3024,6 +3460,10 @@
             activeCols.forEach(col => {
                 if (col.sum) {
                     html += `<td id="total_${col.id}">0</td>`;
+                } else if (col.id === 'reconSummary') {
+                    html += `<td id="total_reconSummary" style="font-size:0.75rem; font-weight:700; white-space:nowrap; text-align:center; padding:2px 4px;"></td>`;
+                } else if (col.id === 'dprsTsNumber') {
+                    html += `<td id="total_dprsTsNumber" style="font-size:0.75rem; font-weight:700; white-space:nowrap; text-align:center; padding:2px 4px;"></td>`;
                 } else {
                     html += `<td></td>`;
                 }
@@ -3109,6 +3549,36 @@
                     if (el) el.textContent = text;
                 }
             });
+
+            // Calculate Matched and Mismatched totals across the month for the summary column
+            let totalMatched = 0;
+            let totalMismatched = 0;
+            for (let d = 1; d <= daysInMonth; d++) {
+                const sumEl = document.getElementById(`reconSummary_${d}`);
+                if (sumEl && sumEl.value) {
+                    const sVal = sumEl.value.toUpperCase().trim();
+                    const m1 = sVal.match(/^(\d+)\s+MATCHED$/);
+                    const m2 = sVal.match(/^(\d+)\s+MATCHED,\s*(\d+)\s+MISMATCHED$/);
+                    const m3 = sVal.match(/^(\d+)\s+MISMATCHED$/);
+                    if (sVal === 'MATCHED') {
+                        totalMatched += 1;
+                    } else if (m1) {
+                        totalMatched += parseInt(m1[1], 10);
+                    } else if (m2) {
+                        totalMatched += parseInt(m2[1], 10);
+                        totalMismatched += parseInt(m2[2], 10);
+                    } else if (m3) {
+                        totalMismatched += parseInt(m3[1], 10);
+                    } else if (sVal.includes('MISMATCHED')) {
+                        totalMismatched += 1;
+                    }
+                }
+            }
+
+            const reconSummaryFoot = document.getElementById('total_reconSummary');
+            if (reconSummaryFoot) {
+                reconSummaryFoot.innerHTML = `<span style="display:inline-flex; align-items:center; gap:4px;"><span style="color:#15803d; background:#dcfce7; padding:2px 6px; border-radius:4px; font-weight:700;">${totalMatched} MATCHED</span><span style="color:#b91c1c; background:#fee2e2; padding:2px 6px; border-radius:4px; font-weight:700;">${totalMismatched} MISMATCHED</span></span>`;
+            }
 
             const countEl = document.getElementById('totalTimesheets');
             if (countEl) {
@@ -3360,7 +3830,13 @@
             });
         }
         function proceedToStep2() { generateStep2Data(); goToStep(2); }
-        function proceedToStep3() { generateStep3Data(); goToStep(3); }
+        function proceedToStep3() {
+            step3UndoStack = [];
+            step3RedoStack = [];
+            generateStep3Data();
+            goToStep(3);
+            updateStep3UndoRedoButtons();
+        }
         function proceedToStep4() { goToStep(4); }
 
         function handleFileSelect(event) {
@@ -3608,7 +4084,114 @@
             });
         }
 
-        // --- STEP 3: TECH MATCHING ---
+        // --- STEP 3: TECH MATCHING & UNDO/REDO ---
+        let step3UndoStack = [];
+        let step3RedoStack = [];
+
+        function getCurrentStep3Selections() {
+            const selections = {};
+            document.querySelectorAll('#step3Table select').forEach(sel => {
+                if (sel.dataset.tech) {
+                    selections[sel.dataset.tech] = sel.value;
+                }
+            });
+            return selections;
+        }
+
+        function saveStep3CurrentStateToUndo(actionName = 'Action') {
+            const state = {
+                step2Data: JSON.parse(JSON.stringify(step2Data)),
+                selections: getCurrentStep3Selections(),
+                actionName: actionName
+            };
+            step3UndoStack.push(state);
+            if (step3UndoStack.length > 50) step3UndoStack.shift();
+            step3RedoStack = []; // Clear redo stack on new modification
+            updateStep3UndoRedoButtons();
+        }
+
+        function saveStep3StateDirect(state) {
+            step3UndoStack.push(state);
+            if (step3UndoStack.length > 50) step3UndoStack.shift();
+            step3RedoStack = [];
+            updateStep3UndoRedoButtons();
+        }
+
+        function undoStep3() {
+            if (step3UndoStack.length === 0) return;
+
+            // Save current state to redo stack
+            const currentState = {
+                step2Data: JSON.parse(JSON.stringify(step2Data)),
+                selections: getCurrentStep3Selections(),
+                actionName: 'Current State'
+            };
+            step3RedoStack.push(currentState);
+
+            // Pop previous state and restore
+            const prevState = step3UndoStack.pop();
+            step2Data = JSON.parse(JSON.stringify(prevState.step2Data));
+            generateStep3Data(prevState.selections);
+            updateStep3UndoRedoButtons();
+
+            showToast(`Undo: Reverted ${prevState.actionName || 'change'}. Data restored!`, 'info');
+        }
+
+        function redoStep3() {
+            if (step3RedoStack.length === 0) return;
+
+            // Save current state to undo stack
+            const currentState = {
+                step2Data: JSON.parse(JSON.stringify(step2Data)),
+                selections: getCurrentStep3Selections(),
+                actionName: 'Current State'
+            };
+            step3UndoStack.push(currentState);
+
+            // Pop next state and restore
+            const nextState = step3RedoStack.pop();
+            step2Data = JSON.parse(JSON.stringify(nextState.step2Data));
+            generateStep3Data(nextState.selections);
+            updateStep3UndoRedoButtons();
+
+            showToast(`Redo: Restored ${nextState.actionName || 'change'}.`, 'info');
+        }
+
+        function updateStep3UndoRedoButtons() {
+            const btnUndo = document.getElementById('btnStep3Undo');
+            const btnRedo = document.getElementById('btnStep3Redo');
+
+            if (btnUndo) {
+                const canUndo = step3UndoStack.length > 0;
+                btnUndo.disabled = !canUndo;
+                btnUndo.style.opacity = canUndo ? '1' : '0.5';
+                btnUndo.style.cursor = canUndo ? 'pointer' : 'not-allowed';
+                btnUndo.style.borderColor = canUndo ? '#4361ee' : 'var(--border-color)';
+                btnUndo.style.color = canUndo ? '#4361ee' : 'var(--text-secondary)';
+                if (canUndo) {
+                    const lastAction = step3UndoStack[step3UndoStack.length - 1].actionName;
+                    btnUndo.title = `Undo: ${lastAction} (Ctrl+Z)`;
+                } else {
+                    btnUndo.title = 'Nothing to undo (Ctrl+Z)';
+                }
+            }
+
+            if (btnRedo) {
+                const canRedo = step3RedoStack.length > 0;
+                btnRedo.disabled = !canRedo;
+                btnRedo.style.opacity = canRedo ? '1' : '0.5';
+                btnRedo.style.cursor = canRedo ? 'pointer' : 'not-allowed';
+                btnRedo.style.borderColor = canRedo ? '#4361ee' : 'var(--border-color)';
+                btnRedo.style.color = canRedo ? '#4361ee' : 'var(--text-secondary)';
+                if (canRedo) {
+                    const nextAction = step3RedoStack[step3RedoStack.length - 1].actionName;
+                    btnRedo.title = `Redo: ${nextAction} (Ctrl+Y)`;
+                } else {
+                    btnRedo.title = 'Nothing to redo (Ctrl+Y)';
+                }
+            }
+        }
+
         function calculateMatch(str1, str2) {
             const s1 = str1.toLowerCase().trim();
             const s2 = str2.toLowerCase().trim();
@@ -3626,16 +4209,25 @@
             step3Data = [];
             const uniqueTechs = {};
             step2Data.forEach(row => {
-                if (!uniqueTechs[row['TECH']]) {
-                    uniqueTechs[row['TECH']] = [];
+                const tech = row['TECH'] ? String(row['TECH']).trim() : '';
+                if (!tech) return;
+                if (!uniqueTechs[tech]) {
+                    uniqueTechs[tech] = [];
                 }
-                uniqueTechs[row['TECH']].push(row['TIME SHEET NUMBER']);
+                uniqueTechs[tech].push(row['TIME SHEET NUMBER']);
             });
 
             const tbody = document.querySelector('#step3Table tbody');
             tbody.innerHTML = '';
 
-            Object.keys(uniqueTechs).forEach(techName => {
+            const techKeys = Object.keys(uniqueTechs);
+            if (techKeys.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 25px; color: var(--text-secondary);">No technicians found in extracted data.</td></tr>';
+                updateStep3UndoRedoButtons();
+                return;
+            }
+
+            techKeys.forEach(techName => {
                 let scores = masterWorkers.map(mw => {
                     return { name: mw.name, score: calculateMatch(techName, mw.name) };
                 });
@@ -3644,24 +4236,79 @@
 
                 const tr = document.createElement('tr');
 
+                // 1. Delete '✕' Column
+                const tdDel = document.createElement('td');
+                tdDel.style.textAlign = 'center';
+                tdDel.style.verticalAlign = 'middle';
+                tdDel.style.width = '50px';
+                tdDel.style.padding = '6px 4px';
+
+                const btnDel = document.createElement('button');
+                btnDel.type = 'button';
+                btnDel.title = `Delete "${techName}" and remove from data/Excel`;
+                btnDel.textContent = '✕';
+                btnDel.style.background = '#fee2e2';
+                btnDel.style.color = '#dc2626';
+                btnDel.style.border = '1px solid #fca5a5';
+                btnDel.style.borderRadius = '6px';
+                btnDel.style.width = '30px';
+                btnDel.style.height = '30px';
+                btnDel.style.fontWeight = '800';
+                btnDel.style.fontSize = '0.95rem';
+                btnDel.style.cursor = 'pointer';
+                btnDel.style.display = 'inline-flex';
+                btnDel.style.alignItems = 'center';
+                btnDel.style.justifyContent = 'center';
+                btnDel.style.transition = 'all 0.15s ease';
+                btnDel.onmouseover = () => {
+                    btnDel.style.background = '#dc2626';
+                    btnDel.style.color = '#ffffff';
+                    btnDel.style.borderColor = '#b91c1c';
+                    btnDel.style.transform = 'scale(1.08)';
+                };
+                btnDel.onmouseout = () => {
+                    btnDel.style.background = '#fee2e2';
+                    btnDel.style.color = '#dc2626';
+                    btnDel.style.borderColor = '#fca5a5';
+                    btnDel.style.transform = 'scale(1)';
+                };
+                btnDel.onclick = () => deleteStep3Row(techName);
+                tdDel.appendChild(btnDel);
+
+                // 2. Extracted Technician (Editable)
                 const tdTech = document.createElement('td');
+                tdTech.style.padding = '8px 10px';
+                tdTech.style.minWidth = '250px';
                 const inputTech = document.createElement('input');
                 inputTech.type = 'text';
                 inputTech.style.width = '100%';
-                inputTech.style.padding = '6px 10px';
-                inputTech.style.borderRadius = '4px';
-                inputTech.style.border = '1px solid var(--border-color)';
+                inputTech.style.padding = '8px 12px';
+                inputTech.style.borderRadius = '6px';
+                inputTech.style.border = '1.5px solid var(--border-color, #cbd5e1)';
+                inputTech.style.fontSize = '0.88rem';
+                inputTech.style.fontWeight = '600';
+                inputTech.style.color = '#1e293b';
                 inputTech.value = techName;
                 inputTech.dataset.oldTech = techName;
                 inputTech.onchange = handleTechNameEdit;
                 tdTech.appendChild(inputTech);
 
+                // 3. Matched Master Worker (Dropdown with full name and match %)
                 const tdSts = document.createElement('td');
+                tdSts.style.padding = '8px 10px';
+                tdSts.style.minWidth = '380px';
                 const select = document.createElement('select');
                 select.style.width = '100%';
-                select.style.padding = '6px 10px';
-                select.style.borderRadius = '4px';
-                select.style.border = '1px solid var(--border-color)';
+                select.style.minWidth = '360px';
+                select.style.padding = '8px 12px';
+                select.style.borderRadius = '6px';
+                select.style.border = '1.5px solid #4361ee';
+                select.style.background = '#f8fafc';
+                select.style.fontSize = '0.88rem';
+                select.style.fontWeight = '600';
+                select.style.color = '#1e293b';
+                select.style.outline = 'none';
+                select.style.cursor = 'pointer';
                 select.dataset.tech = techName;
 
                 scores.forEach(s => {
@@ -3677,17 +4324,67 @@
                     select.value = scores[scores.length - 1].name;
                 }
 
+                // Track changes for Undo/Redo
+                select.dataset.prevVal = select.value;
+                select.onfocus = (e) => {
+                    e.target.dataset.prevVal = e.target.value;
+                };
+                select.onchange = (e) => {
+                    const prevVal = e.target.dataset.prevVal || '';
+                    const newVal = e.target.value;
+                    if (prevVal !== newVal) {
+                        const prevSelections = getCurrentStep3Selections();
+                        prevSelections[techName] = prevVal;
+                        saveStep3StateDirect({
+                            step2Data: JSON.parse(JSON.stringify(step2Data)),
+                            selections: prevSelections,
+                            actionName: `Changed match for "${techName}"`
+                        });
+                        e.target.dataset.prevVal = newVal;
+                    }
+                };
+
                 tdSts.appendChild(select);
 
+                // 4. Timesheet Numbers
                 const tdTs = document.createElement('td');
+                tdTs.style.padding = '8px 12px';
+                tdTs.style.fontSize = '0.84rem';
+                tdTs.style.color = '#334155';
                 const tsNumbers = [...new Set(uniqueTechs[techName])].join(', ');
                 tdTs.textContent = tsNumbers;
 
+                tr.appendChild(tdDel);
                 tr.appendChild(tdTech);
                 tr.appendChild(tdSts);
                 tr.appendChild(tdTs);
                 tbody.appendChild(tr);
             });
+
+            updateStep3UndoRedoButtons();
+        }
+
+        function deleteStep3Row(techName) {
+            if (!confirm(`Are you sure you want to delete technician "${techName}" and all associated records from data and Excel?\n\n(Note: You can click "Undo" or press Ctrl+Z to restore if deleted by mistake).`)) {
+                return;
+            }
+
+            // Save state to undo stack before deleting
+            saveStep3CurrentStateToUndo(`Deleted "${techName}"`);
+
+            // Remove from step2Data
+            const beforeCount = step2Data.length;
+            step2Data = step2Data.filter(row => {
+                const rowTech = row['TECH'] ? String(row['TECH']).trim() : '';
+                return rowTech !== techName.trim();
+            });
+
+            const currentSelections = getCurrentStep3Selections();
+            delete currentSelections[techName];
+
+            // Re-render Step 3
+            generateStep3Data(currentSelections);
+            showToast(`Deleted "${techName}" (${beforeCount - step2Data.length} records removed). Click "Undo" to restore.`);
         }
 
         function handleTechNameEdit(e) {
@@ -3700,10 +4397,10 @@
                 return;
             }
 
-            const currentSelections = {};
-            document.querySelectorAll('#step3Table select').forEach(sel => {
-                currentSelections[sel.dataset.tech] = sel.value;
-            });
+            // Save state to undo before renaming
+            saveStep3CurrentStateToUndo(`Renamed "${oldName}" to "${newName}"`);
+
+            const currentSelections = getCurrentStep3Selections();
 
             step2Data.forEach(row => {
                 const currentTech = row['TECH'] ? row['TECH'].trim() : '';
@@ -3718,7 +4415,32 @@
             }
 
             generateStep3Data(currentSelections);
+            showToast(`Renamed "${oldName}" to "${newName}". Click "Undo" to revert.`);
         }
+
+        // --- STEP 3 KEYBOARD SHORTCUTS (CTRL+Z / CTRL+Y) ---
+        document.addEventListener('keydown', function (e) {
+            const step3Content = document.getElementById('step3Content');
+            if (!step3Content || step3Content.classList.contains('hidden')) return;
+
+            const activeEl = document.activeElement;
+            const isEditingInput = activeEl && activeEl.tagName === 'INPUT' && activeEl.type === 'text';
+
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+                if (!e.shiftKey) {
+                    if (!isEditingInput) {
+                        e.preventDefault();
+                        undoStep3();
+                    }
+                } else {
+                    e.preventDefault();
+                    redoStep3();
+                }
+            } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+                e.preventDefault();
+                redoStep3();
+            }
+        });
 
         // --- STEP 4: RECONCILIATION ---
         async function fetchAndCompareData() {
@@ -4000,11 +4722,13 @@
         function downloadExcelStep3() {
             const exportData = [];
             document.querySelectorAll('#step3Table tbody tr').forEach(tr => {
-                const techInput = tr.cells[0].querySelector('input');
-                const techName = techInput ? techInput.value : tr.cells[0].textContent;
-                const stsSelect = tr.cells[1].querySelector('select');
+                if (!tr.cells || tr.cells.length < 4) return;
+                const techInput = tr.cells[1].querySelector('input');
+                const techName = techInput ? techInput.value : tr.cells[1].textContent.trim();
+                const stsSelect = tr.cells[2].querySelector('select');
                 const stsMatch = stsSelect ? stsSelect.value : '';
-                const tsNumbers = tr.cells[2].textContent;
+                const tsNumbers = tr.cells[3].textContent.trim();
+                if (!techName) return;
                 exportData.push({
                     'TECH (from File)': techName,
                     'STS Match': stsMatch,
@@ -4066,6 +4790,17 @@
 
             // Save to localStorage for instant UI cache
             localStorage.setItem(`accountsStats_${dept}_${month}_${year}`, JSON.stringify(perWorkerStats));
+            localStorage.setItem(`accountsRecon_${dept}_${month}_${year}`, JSON.stringify(step4Data));
+
+            // If a timesheet is currently open in the portal, re-render it immediately
+            const timesheetSection = document.getElementById('timesheetSection');
+            if (timesheetSection && !timesheetSection.classList.contains('hidden') && currentWorker) {
+                if (currentDepartment === dept && currentMonth === month && currentYear === year) {
+                    buildSpreadsheet(currentData);
+                    const stats = perWorkerStats[currentWorker] || { submitted: 0, notSubmitted: 0 };
+                    updateAccountsCommentDisplay(stats);
+                }
+            }
 
             showLoading('Publishing Accounts Comment to portal...');
             try {
@@ -4075,11 +4810,12 @@
                         action: 'saveAccountsStats',
                         department: dept,
                         monthYear: `${month} ${year}`,
-                        stats: perWorkerStats
+                        stats: perWorkerStats,
+                        reconciliation: step4Data
                     })
                 }).then(r => r.json());
                 hideLoading();
-                showToast(res.message || 'Accounts Comment is now published and visible in the portal!');
+                showToast(res.message || 'Accounts Comment & Timesheet reconciliation columns published and active!');
             } catch (e) {
                 hideLoading();
                 showToast('Accounts Comment enabled in portal!');
