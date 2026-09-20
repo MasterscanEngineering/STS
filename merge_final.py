@@ -47,7 +47,7 @@ def merge_files():
     
     # Extract Admin functions from base_html
     admin_funcs = []
-    admin_pattern = r'function (handleAdminLogin|toggleAdminLogin|showStatusModal|viewWorkerFromStatus|handleResubmit|showVerifyPanel|hideVerifyPanel|handleVerify|refreshWorkerListFromMaster|loadWorkerList|closeModal).*?\}'
+    admin_pattern = r'function (handleAdminLogin|toggleAdminLogin|showStatusModal|viewWorkerFromStatus|handleResubmit|showVerifyPanel|hideVerifyPanel|handleVerify|9q2Vy1qVTYmbVYdxYXUbAMz3jnk4Rp41c1e19z8EnsTy|loadWorkerList|closeModal).*?\}'
     # Actually, let's just use the whole script from base_html and append the missing navigation/zoom parts from app.js
     
     # Let's extract the script from app.js
