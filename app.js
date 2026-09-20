@@ -5,7 +5,7 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyyAfDeE-dM6fRXXH3Vk
             setDefaultMonthYear();
             updateClock();
             setInterval(updateClock, 60000);
-            rfcCCMt9jxJsDqTBXGeaCrr616tdvW3emh();
+            9q2Vy1qVTYmbVYdxYXUbAMz3jnk4Rp41c1e19z8EnsTy();
 
             // Set up exit modal handlers
             document.getElementById('btnExitSave').onclick = async () => {
@@ -53,7 +53,7 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyyAfDeE-dM6fRXXH3Vk
 
         let currentAdminUser = null;
 
-        async function rfcCCMt9jxJsDqTBXGeaCrr616tdvW3emh() {
+        async function 9q2Vy1qVTYmbVYdxYXUbAMz3jnk4Rp41c1e19z8EnsTy() {
             try {
                 const res = await fetch(`${SCRIPT_URL}?action=getWorkerList`).then(r => r.json());
                 if (res.status === 'success') {
@@ -240,36 +240,78 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyyAfDeE-dM6fRXXH3Vk
             }
         }
 
-        async function showStatusModal() {
-            const dept = document.getElementById('departmentSelect').value;
-            const mon = document.getElementById('monthSelect').value;
-            const yr = document.getElementById('yearSelect').value;
-            if (!dept) { showToast('Select Department first', 'error'); return; }
+        let currentStatusData = [];
+        let currentStatusDept = '';
+        let currentStatusMonth = '';
+        let currentStatusYear = '';
 
-            const btnViewPayroll = document.getElementById('btnViewPayrollStatus');
-            const btnDownloadPayroll = document.getElementById('btnDownloadPayrollStatus');
-            if (btnViewPayroll) btnViewPayroll.style.display = isAdmin ? 'inline-flex' : 'none';
-            if (btnDownloadPayroll) btnDownloadPayroll.style.display = isAdmin ? 'inline-flex' : 'none';
+        async function showStatusModal() {
+            const deptEl = document.getElementById('departmentSelect');
+            const monEl = document.getElementById('monthSelect');
+            const yrEl = document.getElementById('yearSelect');
+
+            const dept = (deptEl && deptEl.value) ? deptEl.value : 'All';
+            const mon = (monEl && monEl.value) ? monEl.value : new Date().toLocaleString('en-US', { month: 'long' });
+            const yr = (yrEl && yrEl.value) ? yrEl.value : new Date().getFullYear().toString();
+
+            currentStatusDept = dept;
+            currentStatusMonth = mon;
+            currentStatusYear = yr;
 
             showLoading('Fetching status...');
-            document.getElementById('statusSubtitle').textContent = `${dept} · ${mon} ${yr}`;
+            const deptTitle = (dept === 'All') ? 'All Departments' : dept;
+            document.getElementById('statusSubtitle').textContent = `${deptTitle} · ${mon} ${yr}`;
             try {
                 const res = await fetch(`${SCRIPT_URL}?action=getStatus&department=${encodeURIComponent(dept)}&monthYear=${encodeURIComponent(mon + ' ' + yr)}`).then(r => r.json());
                 hideLoading();
                 if (res.status === 'success') {
-                    let html = '<table class="status-table"><thead><tr><th>Worker Name</th><th>Status</th><th>Action</th></tr></thead><tbody>';
-                    res.data.forEach(item => {
-                        const badgeClass = `badge-${item.status.toLowerCase()}`;
-                        let actions = '-';
-                        if (isAdmin && (item.status === 'Submitted' || item.status === 'Verified')) {
-                            actions = `<div style="display: flex; gap: 5px; justify-content: flex-start;"><button onclick="viewWorkerFromStatus('${item.name}')" style="background:var(--accent-primary); color:white; border:none; padding:4px 8px; border-radius:4px; font-size:0.8rem; cursor:pointer;">View</button>`;
-                            if (item.status === 'Verified') {
-                                actions += `<button onclick="handleResubmit('${item.name}')" style="background:var(--accent-orange); color:white; border:none; padding:4px 8px; border-radius:4px; font-size:0.8rem; cursor:pointer;">Resubmit</button>`;
-                            }
-                            actions += `</div>`;
-                        }
-                        html += `<tr><td>${item.name}</td><td><span class="badge ${badgeClass}">${item.status}</span></td><td>${actions}</td></tr>`;
+                    currentStatusData = res.data || [];
+                    
+                    let pendingCount = 0;
+                    let submittedCount = 0;
+                    let verifiedCount = 0;
+
+                    currentStatusData.forEach(item => {
+                        const st = (item.status || '').toLowerCase();
+                        if (st === 'pending') pendingCount++;
+                        else if (st === 'submitted') submittedCount++;
+                        else if (st === 'verified') verifiedCount++;
                     });
+
+                    const elPending = document.getElementById('statusPendingCount');
+                    const elSubmitted = document.getElementById('statusSubmittedCount');
+                    const elVerified = document.getElementById('statusVerifiedCount');
+                    if (elPending) elPending.textContent = pendingCount;
+                    if (elSubmitted) elSubmitted.textContent = submittedCount;
+                    if (elVerified) elVerified.textContent = verifiedCount;
+
+                    const showDeptCol = (dept === 'All' || currentStatusData.some(d => d.department && d.department !== dept));
+
+                    let html = '<table class="status-table"><thead><tr>';
+                    if (showDeptCol) html += '<th style="text-align: left; padding: 10px 12px;">Department</th>';
+                    html += '<th style="text-align: left; padding: 10px 12px;">Worker Name</th><th>Status</th><th>Action</th></tr></thead><tbody>';
+                    
+                    if (currentStatusData.length === 0) {
+                        html += `<tr><td colspan="${showDeptCol ? 4 : 3}" style="text-align: center; padding: 25px; color: var(--text-secondary);">No worker records found.</td></tr>`;
+                    } else {
+                        currentStatusData.forEach(item => {
+                            const badgeClass = `badge-${(item.status || 'pending').toLowerCase()}`;
+                            const wDept = item.department || dept;
+                            let actions = '-';
+                            if (isAdmin && (item.status === 'Submitted' || item.status === 'Verified')) {
+                                actions = `<div style="display: flex; gap: 5px; justify-content: flex-start;"><button onclick="viewWorkerFromStatus('${item.name}', '${wDept}')" style="background:var(--accent-primary); color:white; border:none; padding:4px 8px; border-radius:4px; font-size:0.8rem; cursor:pointer;">View</button>`;
+                                if (item.status === 'Verified') {
+                                    actions += `<button onclick="handleResubmit('${item.name}', '${wDept}')" style="background:var(--accent-orange); color:white; border:none; padding:4px 8px; border-radius:4px; font-size:0.8rem; cursor:pointer;">Resubmit</button>`;
+                                }
+                                actions += `</div>`;
+                            }
+                            html += `<tr>`;
+                            if (showDeptCol) {
+                                html += `<td style="font-weight: 700; color: #334155; padding: 8px 12px;">${wDept}</td>`;
+                            }
+                            html += `<td style="padding: 8px 12px; font-weight: 600;">${item.name}</td><td><span class="badge ${badgeClass}">${item.status}</span></td><td>${actions}</td></tr>`;
+                        });
+                    }
                     html += '</tbody></table>';
                     document.getElementById('statusListContent').innerHTML = html;
                     document.getElementById('statusModal').classList.add('show');
@@ -277,10 +319,58 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyyAfDeE-dM6fRXXH3Vk
             } catch (e) { hideLoading(); showToast('Error fetching status', 'error'); }
         }
 
-        function viewWorkerFromStatus(name) {
+        function viewWorkerFromStatus(name, dept) {
+            if (dept && document.getElementById('departmentSelect')) {
+                document.getElementById('departmentSelect').value = dept;
+                if (typeof loadWorkerList === 'function') loadWorkerList();
+            }
             document.getElementById('workerSelect').value = name;
             closeModal('statusModal');
             loadTimesheet();
+        }
+
+        function downloadStatusExcel() {
+            if (!currentStatusData || currentStatusData.length === 0) {
+                showToast('No status data to export', 'info');
+                return;
+            }
+
+            let pendingCount = 0;
+            let submittedCount = 0;
+            let verifiedCount = 0;
+
+            currentStatusData.forEach(item => {
+                const st = (item.status || '').toLowerCase();
+                if (st === 'pending') pendingCount++;
+                else if (st === 'submitted') submittedCount++;
+                else if (st === 'verified') verifiedCount++;
+            });
+
+            const deptTitle = (currentStatusDept === 'All') ? 'All Departments' : currentStatusDept;
+            const summaryComment = `pending: ${pendingCount}, submitted: ${submittedCount}, verified: ${verifiedCount}`;
+
+            // Build AoA format
+            const aoa = [
+                [`Submission Status - ${deptTitle} (${currentStatusMonth} ${currentStatusYear})`],
+                [`Summary: ${summaryComment}`],
+                [], // Empty row
+                ['Department', 'Worker Name', 'Status']
+            ];
+
+            currentStatusData.forEach(item => {
+                aoa.push([
+                    item.department || currentStatusDept,
+                    item.name,
+                    item.status
+                ]);
+            });
+
+            const ws = XLSX.utils.aoa_to_sheet(aoa);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Submission Status");
+            const fileName = `submission-status-${currentStatusDept.toLowerCase().replace(/\s+/g, '-')}-${currentStatusMonth}-${currentStatusYear}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+            showToast('Submission Status Excel downloaded successfully!');
         }
 
         async function handleResubmit(name) {
@@ -873,7 +963,7 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyyAfDeE-dM6fRXXH3Vk
                     } else {
                         document.getElementById('adminPassword').value = newPwd;
                     }
-                    rfcCCMt9jxJsDqTBXGeaCrr616tdvW3emh();
+                    9q2Vy1qVTYmbVYdxYXUbAMz3jnk4Rp41c1e19z8EnsTy();
                 } else {
                     showToast(res.message || 'Error updating password', 'error');
                 }
@@ -1391,47 +1481,231 @@ function calculateMatch(str1, str2) {
     return (matchCount / Math.max(tokens1.length, tokens2.length)) * 100;
 }
 
+// --- STEP 3: TECH MATCHING & UNDO/REDO ---
+let step3UndoStack = [];
+let step3RedoStack = [];
+
+function getCurrentStep3Selections() {
+    const selections = {};
+    document.querySelectorAll('#step3Table select').forEach(sel => {
+        if (sel.dataset.tech) {
+            selections[sel.dataset.tech] = sel.value;
+        }
+    });
+    return selections;
+}
+
+function saveStep3CurrentStateToUndo(actionName = 'Action') {
+    const state = {
+        step2Data: JSON.parse(JSON.stringify(step2Data)),
+        selections: getCurrentStep3Selections(),
+        actionName: actionName
+    };
+    step3UndoStack.push(state);
+    if (step3UndoStack.length > 50) step3UndoStack.shift();
+    step3RedoStack = [];
+    updateStep3UndoRedoButtons();
+}
+
+function saveStep3StateDirect(state) {
+    step3UndoStack.push(state);
+    if (step3UndoStack.length > 50) step3UndoStack.shift();
+    step3RedoStack = [];
+    updateStep3UndoRedoButtons();
+}
+
+function undoStep3() {
+    if (step3UndoStack.length === 0) return;
+
+    const currentState = {
+        step2Data: JSON.parse(JSON.stringify(step2Data)),
+        selections: getCurrentStep3Selections(),
+        actionName: 'Current State'
+    };
+    step3RedoStack.push(currentState);
+
+    const prevState = step3UndoStack.pop();
+    step2Data = JSON.parse(JSON.stringify(prevState.step2Data));
+    generateStep3Data(prevState.selections);
+    updateStep3UndoRedoButtons();
+
+    if (typeof showToast === 'function') {
+        showToast(`Undo: Reverted ${prevState.actionName || 'change'}. Data restored!`, 'info');
+    }
+}
+
+function redoStep3() {
+    if (step3RedoStack.length === 0) return;
+
+    const currentState = {
+        step2Data: JSON.parse(JSON.stringify(step2Data)),
+        selections: getCurrentStep3Selections(),
+        actionName: 'Current State'
+    };
+    step3UndoStack.push(currentState);
+
+    const nextState = step3RedoStack.pop();
+    step2Data = JSON.parse(JSON.stringify(nextState.step2Data));
+    generateStep3Data(nextState.selections);
+    updateStep3UndoRedoButtons();
+
+    if (typeof showToast === 'function') {
+        showToast(`Redo: Restored ${nextState.actionName || 'change'}.`, 'info');
+    }
+}
+
+function updateStep3UndoRedoButtons() {
+    const btnUndo = document.getElementById('btnStep3Undo');
+    const btnRedo = document.getElementById('btnStep3Redo');
+
+    if (btnUndo) {
+        const canUndo = step3UndoStack.length > 0;
+        btnUndo.disabled = !canUndo;
+        btnUndo.style.opacity = canUndo ? '1' : '0.5';
+        btnUndo.style.cursor = canUndo ? 'pointer' : 'not-allowed';
+        btnUndo.style.borderColor = canUndo ? '#4361ee' : 'var(--border-color, #cbd5e1)';
+        btnUndo.style.color = canUndo ? '#4361ee' : 'var(--text-secondary, #64748b)';
+        if (canUndo) {
+            const lastAction = step3UndoStack[step3UndoStack.length - 1].actionName;
+            btnUndo.title = `Undo: ${lastAction} (Ctrl+Z)`;
+        } else {
+            btnUndo.title = 'Nothing to undo (Ctrl+Z)';
+        }
+    }
+
+    if (btnRedo) {
+        const canRedo = step3RedoStack.length > 0;
+        btnRedo.disabled = !canRedo;
+        btnRedo.style.opacity = canRedo ? '1' : '0.5';
+        btnRedo.style.cursor = canRedo ? 'pointer' : 'not-allowed';
+        btnRedo.style.borderColor = canRedo ? '#4361ee' : 'var(--border-color, #cbd5e1)';
+        btnRedo.style.color = canRedo ? '#4361ee' : 'var(--text-secondary, #64748b)';
+        if (canRedo) {
+            const nextAction = step3RedoStack[step3RedoStack.length - 1].actionName;
+            btnRedo.title = `Redo: ${nextAction} (Ctrl+Y)`;
+        } else {
+            btnRedo.title = 'Nothing to redo (Ctrl+Y)';
+        }
+    }
+}
+
+function calculateMatch(str1, str2) {
+    const s1 = str1.toLowerCase().trim();
+    const s2 = str2.toLowerCase().trim();
+    if (s1 === s2) return 100;
+    
+    const tokens1 = s1.split(/\s+/);
+    const tokens2 = s2.split(/\s+/);
+    let matchCount = 0;
+    tokens1.forEach(t => { if (tokens2.includes(t)) matchCount++; });
+    
+    return (matchCount / Math.max(tokens1.length, tokens2.length)) * 100;
+}
+
 function generateStep3Data(preservedSelections = {}) {
     step3Data = [];
     const uniqueTechs = {};
     step2Data.forEach(row => {
-        if (!uniqueTechs[row['TECH']]) {
-            uniqueTechs[row['TECH']] = [];
+        const tech = row['TECH'] ? String(row['TECH']).trim() : '';
+        if (!tech) return;
+        if (!uniqueTechs[tech]) {
+            uniqueTechs[tech] = [];
         }
-        uniqueTechs[row['TECH']].push(row['TIME SHEET NUMBER']);
+        uniqueTechs[tech].push(row['TIME SHEET NUMBER']);
     });
     
-    // For each unique tech, find best match in masterWorkers
     const tbody = document.querySelector('#step3Table tbody');
     tbody.innerHTML = '';
     
-    const allMasterNames = masterWorkers.map(w => w.name);
+    const techKeys = Object.keys(uniqueTechs);
+    if (techKeys.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 25px; color: var(--text-secondary, #64748b);">No technicians found in extracted data.</td></tr>';
+        updateStep3UndoRedoButtons();
+        return;
+    }
     
-    Object.keys(uniqueTechs).forEach(techName => {
-        // Calculate scores
+    techKeys.forEach(techName => {
         let scores = masterWorkers.map(mw => {
             return { name: mw.name, score: calculateMatch(techName, mw.name) };
         });
         
-        // Sorting logic requested: Exact match (100) at BOTTOM, 50% middle, 1-50% top
-        // Let's sort ascending by score, so lowest score is first (top) and highest score (exact) is last (bottom)
         scores.sort((a, b) => a.score - b.score);
         
-        // Create row
         const tr = document.createElement('tr');
         
+        // 1. Delete '✕' Column
+        const tdDel = document.createElement('td');
+        tdDel.style.textAlign = 'center';
+        tdDel.style.verticalAlign = 'middle';
+        tdDel.style.width = '50px';
+        tdDel.style.padding = '6px 4px';
+
+        const btnDel = document.createElement('button');
+        btnDel.type = 'button';
+        btnDel.title = `Delete "${techName}" and remove from data/Excel`;
+        btnDel.textContent = '✕';
+        btnDel.style.background = '#fee2e2';
+        btnDel.style.color = '#dc2626';
+        btnDel.style.border = '1px solid #fca5a5';
+        btnDel.style.borderRadius = '6px';
+        btnDel.style.width = '30px';
+        btnDel.style.height = '30px';
+        btnDel.style.fontWeight = '800';
+        btnDel.style.fontSize = '0.95rem';
+        btnDel.style.cursor = 'pointer';
+        btnDel.style.display = 'inline-flex';
+        btnDel.style.alignItems = 'center';
+        btnDel.style.justifyContent = 'center';
+        btnDel.style.transition = 'all 0.15s ease';
+        btnDel.onmouseover = () => {
+            btnDel.style.background = '#dc2626';
+            btnDel.style.color = '#ffffff';
+            btnDel.style.borderColor = '#b91c1c';
+            btnDel.style.transform = 'scale(1.08)';
+        };
+        btnDel.onmouseout = () => {
+            btnDel.style.background = '#fee2e2';
+            btnDel.style.color = '#dc2626';
+            btnDel.style.borderColor = '#fca5a5';
+            btnDel.style.transform = 'scale(1)';
+        };
+        btnDel.onclick = () => deleteStep3Row(techName);
+        tdDel.appendChild(btnDel);
+        
+        // 2. Extracted Technician (Editable)
         const tdTech = document.createElement('td');
+        tdTech.style.padding = '8px 10px';
+        tdTech.style.minWidth = '250px';
         const inputTech = document.createElement('input');
         inputTech.type = 'text';
-        inputTech.className = 'form-control';
+        inputTech.style.width = '100%';
+        inputTech.style.padding = '8px 12px';
+        inputTech.style.borderRadius = '6px';
+        inputTech.style.border = '1.5px solid var(--border-color, #cbd5e1)';
+        inputTech.style.fontSize = '0.88rem';
+        inputTech.style.fontWeight = '600';
+        inputTech.style.color = '#1e293b';
         inputTech.value = techName;
         inputTech.dataset.oldTech = techName;
         inputTech.onchange = handleTechNameEdit;
         tdTech.appendChild(inputTech);
         
+        // 3. Matched Master Worker (Dropdown with full name and match %)
         const tdSts = document.createElement('td');
+        tdSts.style.padding = '8px 10px';
+        tdSts.style.minWidth = '380px';
         const select = document.createElement('select');
-        select.className = 'form-control';
+        select.style.width = '100%';
+        select.style.minWidth = '360px';
+        select.style.padding = '8px 12px';
+        select.style.borderRadius = '6px';
+        select.style.border = '1.5px solid #4361ee';
+        select.style.background = '#f8fafc';
+        select.style.fontSize = '0.88rem';
+        select.style.fontWeight = '600';
+        select.style.color = '#1e293b';
+        select.style.outline = 'none';
+        select.style.cursor = 'pointer';
         select.dataset.tech = techName;
         
         scores.forEach(s => {
@@ -1441,24 +1715,75 @@ function generateStep3Data(preservedSelections = {}) {
             select.appendChild(opt);
         });
         
-        // Pre-select the best match (which is at the bottom of the options)
         if(preservedSelections[techName]) {
             select.value = preservedSelections[techName];
         } else if(scores.length > 0) {
             select.value = scores[scores.length - 1].name;
         }
+
+        // Track changes for Undo/Redo
+        select.dataset.prevVal = select.value;
+        select.onfocus = (e) => {
+            e.target.dataset.prevVal = e.target.value;
+        };
+        select.onchange = (e) => {
+            const prevVal = e.target.dataset.prevVal || '';
+            const newVal = e.target.value;
+            if (prevVal !== newVal) {
+                const prevSelections = getCurrentStep3Selections();
+                prevSelections[techName] = prevVal;
+                saveStep3StateDirect({
+                    step2Data: JSON.parse(JSON.stringify(step2Data)),
+                    selections: prevSelections,
+                    actionName: `Changed match for "${techName}"`
+                });
+                e.target.dataset.prevVal = newVal;
+            }
+        };
         
         tdSts.appendChild(select);
         
+        // 4. Timesheet Numbers
         const tdTs = document.createElement('td');
+        tdTs.style.padding = '8px 12px';
+        tdTs.style.fontSize = '0.84rem';
+        tdTs.style.color = '#334155';
         const tsNumbers = [...new Set(uniqueTechs[techName])].join(', ');
         tdTs.textContent = tsNumbers;
         
+        tr.appendChild(tdDel);
         tr.appendChild(tdTech);
         tr.appendChild(tdSts);
         tr.appendChild(tdTs);
         tbody.appendChild(tr);
     });
+
+    updateStep3UndoRedoButtons();
+}
+
+function deleteStep3Row(techName) {
+    if (!confirm(`Are you sure you want to delete technician "${techName}" and all associated records from data and Excel?\n\n(Note: You can click "Undo" or press Ctrl+Z to restore if deleted by mistake).`)) {
+        return;
+    }
+
+    // Save state to undo before deleting
+    saveStep3CurrentStateToUndo(`Deleted "${techName}"`);
+
+    const beforeCount = step2Data.length;
+    step2Data = step2Data.filter(row => {
+        const rowTech = row['TECH'] ? String(row['TECH']).trim() : '';
+        return rowTech !== techName.trim();
+    });
+
+    const currentSelections = getCurrentStep3Selections();
+    delete currentSelections[techName];
+
+    generateStep3Data(currentSelections);
+    if (typeof showToast === 'function') {
+        showToast(`Deleted "${techName}" (${beforeCount - step2Data.length} records removed). Click "Undo" to restore.`);
+    } else {
+        alert(`Deleted "${techName}" (${beforeCount - step2Data.length} records removed). Click "Undo" to restore.`);
+    }
 }
 
 function handleTechNameEdit(e) {
@@ -1470,29 +1795,53 @@ function handleTechNameEdit(e) {
         input.value = oldName;
         return;
     }
+
+    // Save state to undo before renaming
+    saveStep3CurrentStateToUndo(`Renamed "${oldName}" to "${newName}"`);
     
-    // Save current selections
-    const currentSelections = {};
-    document.querySelectorAll('#step3Table select').forEach(sel => {
-        currentSelections[sel.dataset.tech] = sel.value;
-    });
+    const currentSelections = getCurrentStep3Selections();
     
-    // Update step2Data
     step2Data.forEach(row => {
-        if(row['TECH'] === oldName) {
+        const currentTech = row['TECH'] ? row['TECH'].trim() : '';
+        if(currentTech === oldName) {
             row['TECH'] = newName;
         }
     });
     
-    // Transfer selection to new name if it existed
     if(currentSelections[oldName]) {
         currentSelections[newName] = currentSelections[oldName];
         delete currentSelections[oldName];
     }
     
-    // Re-render
     generateStep3Data(currentSelections);
+    if (typeof showToast === 'function') {
+        showToast(`Renamed "${oldName}" to "${newName}". Click "Undo" to revert.`);
+    }
 }
+
+// --- STEP 3 KEYBOARD SHORTCUTS (CTRL+Z / CTRL+Y) ---
+document.addEventListener('keydown', function (e) {
+    const step3Content = document.getElementById('step3Content');
+    if (!step3Content || step3Content.classList.contains('hidden')) return;
+
+    const activeEl = document.activeElement;
+    const isEditingInput = activeEl && activeEl.tagName === 'INPUT' && activeEl.type === 'text';
+
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        if (!e.shiftKey) {
+            if (!isEditingInput) {
+                e.preventDefault();
+                undoStep3();
+            }
+        } else {
+            e.preventDefault();
+            redoStep3();
+        }
+    } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+        e.preventDefault();
+        redoStep3();
+    }
+});
 
 // --- STEP 4: COMPARE & SUMMARY ---
 async function fetchAndCompareData() {
@@ -1782,6 +2131,7 @@ async function showAccountsCommentInPortal() {
     });
 
     localStorage.setItem(`accountsStats_${dept}_${month}_${year}`, JSON.stringify(perWorkerStats));
+    localStorage.setItem(`accountsRecon_${dept}_${month}_${year}`, JSON.stringify(step4Data));
 
     showAccountsLoading(true);
     try {
@@ -1791,15 +2141,56 @@ async function showAccountsCommentInPortal() {
                 action: 'saveAccountsStats',
                 department: dept,
                 monthYear: `${month} ${year}`,
-                stats: perWorkerStats
+                stats: perWorkerStats,
+                reconciliation: step4Data
             })
         }).then(r => r.json());
         showAccountsLoading(false);
-        alert(res.message || 'Accounts Comment is now visible in the portal!');
+        alert(res.message || 'Accounts Comment & Timesheet reconciliation columns published successfully!');
     } catch (e) {
         showAccountsLoading(false);
         alert('Accounts Comment enabled in portal!');
     }
+}
+
+function downloadExcelStep1() {
+    if (step1Data.length === 0) return alert('No data to download.');
+    const ws = XLSX.utils.json_to_sheet(step1Data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Step1_Combined");
+    XLSX.writeFile(wb, "Step1_" + currentUploadedFileName);
+}
+
+function downloadExcelStep2() {
+    if (step2Data.length === 0) return alert('No data to download.');
+    const ws = XLSX.utils.json_to_sheet(step2Data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Step2_Unpivoted");
+    XLSX.writeFile(wb, "Step2_" + currentUploadedFileName);
+}
+
+function downloadExcelStep3() {
+    const exportData = [];
+    document.querySelectorAll('#step3Table tbody tr').forEach(tr => {
+        if (!tr.cells || tr.cells.length < 4) return;
+        const techInput = tr.cells[1].querySelector('input');
+        const techName = techInput ? techInput.value : tr.cells[1].textContent.trim();
+        const stsSelect = tr.cells[2].querySelector('select');
+        const stsMatch = stsSelect ? stsSelect.value : '';
+        const tsNumbers = tr.cells[3].textContent.trim();
+        if (!techName) return;
+        exportData.push({
+            'TECH (from File)': techName,
+            'STS Match': stsMatch,
+            'Time Sheet Number(s)': tsNumbers
+        });
+    });
+
+    if (exportData.length === 0) return alert('No data to download.');
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Step3_Mapping");
+    XLSX.writeFile(wb, "Step3_" + currentUploadedFileName);
 }
 
 function downloadSummaryExcel() {
