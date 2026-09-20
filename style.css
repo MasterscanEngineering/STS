@@ -772,6 +772,16 @@ body {
     width: 140px;
 }
 
+.col-dprs-ts {
+    width: 170px !important;
+    min-width: 170px !important;
+}
+
+.col-recon-summary {
+    width: 230px !important;
+    min-width: 230px !important;
+}
+
 /* Table Header */
 .spreadsheet thead {
     position: sticky;
@@ -836,6 +846,49 @@ body {
 
 .spreadsheet tbody tr.row-saturday:hover {
     background: #fef3c7;
+}
+
+/* Reconciliation Matching Row Colors */
+.spreadsheet tbody tr.row-match-green {
+    background: #dcfce7 !important;
+    border-left: 5px solid #15803d !important;
+}
+.spreadsheet tbody tr.row-match-green td {
+    background: #dcfce7 !important;
+    color: #14532d !important;
+}
+.spreadsheet tbody tr.row-match-green input {
+    background: #f0fdf4 !important;
+    color: #14532d !important;
+    font-weight: 700 !important;
+}
+
+.spreadsheet tbody tr.row-match-red {
+    background: #fee2e2 !important;
+    border-left: 5px solid #dc2626 !important;
+}
+.spreadsheet tbody tr.row-match-red td {
+    background: #fee2e2 !important;
+    color: #991b1b !important;
+}
+.spreadsheet tbody tr.row-match-red input {
+    background: #fef2f2 !important;
+    color: #b91c1c !important;
+    font-weight: 700 !important;
+}
+
+.spreadsheet tbody tr.row-match-blue {
+    background: #e0f2fe !important;
+    border-left: 5px solid #0284c7 !important;
+}
+.spreadsheet tbody tr.row-match-blue td {
+    background: #e0f2fe !important;
+    color: #0369a1 !important;
+}
+.spreadsheet tbody tr.row-match-blue input {
+    background: #f0f9ff !important;
+    color: #0284c7 !important;
+    font-weight: 700 !important;
 }
 
 /* Cell Inputs */
