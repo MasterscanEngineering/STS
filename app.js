@@ -1,23 +1,35 @@
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyyAfDeE-dM6fRXXH3VkKti6Qux2aO-E4oYroaoyMgNiRNXEuJhg7PcobO7NfGhnohItw/exec';
         let currentWorker = '', currentMonth = '', currentYear = '', currentData = [], daysInMonth = 0, entryMode = 'month', isAdmin = false, masterWorkerList = {}, masterAdmins = [], currentDepartment = '', isLocked = false, selectedDayOnly = null;
 
-        document.addEventListener('DOMContentLoaded', () => {
-            setDefaultMonthYear();
-            updateClock();
-            setInterval(updateClock, 60000);
-            9q2Vy1qVTYmbVYdxYXUbAMz3jnk4Rp41c1e19z8EnsTy();
+        function initApp() {
+    setDefaultMonthYear();
+    updateClock();
+    setInterval(updateClock, 60000);
+    9q2Vy1qVTYmbVYdxYXUbAMz3jnk4Rp41c1e19z8EnsTy();
 
-            // Set up exit modal handlers
-            document.getElementById('btnExitSave').onclick = async () => {
-                closeModal('exitConfirmModal');
-                await submitTimesheet();
-                exitTimesheet();
-            };
-            document.getElementById('btnExitNoSave').onclick = () => {
-                closeModal('exitConfirmModal');
-                exitTimesheet();
-            };
-        });
+    // Set up exit modal handlers
+    const btnSave = document.getElementById('btnExitSave');
+    if (btnSave) {
+        btnSave.onclick = async () => {
+            closeModal('exitConfirmModal');
+            await submitTimesheet();
+            exitTimesheet();
+        };
+    }
+    const btnNoSave = document.getElementById('btnExitNoSave');
+    if (btnNoSave) {
+        btnNoSave.onclick = () => {
+            closeModal('exitConfirmModal');
+            exitTimesheet();
+        };
+    }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initApp);
+} else {
+    initApp();
+}
 
         function updateClock() { const now = new Date(); const clockEl = document.getElementById('currentDateTime'); if (clockEl) clockEl.textContent = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }); }
 
@@ -212,11 +224,30 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyyAfDeE-dM6fRXXH3Vk
 
         function closeModal(id) { document.getElementById(id).classList.remove('show'); }
 
-        function handleAdminLogin() {
+        async function handleAdminLogin() {
             const id = document.getElementById('adminId').value.trim();
             const pw = document.getElementById('adminPassword').value;
 
-            const admin = masterAdmins.find(a => a.name === id && String(a.password) === String(pw));
+            if (!id || !pw) {
+                showToast('Please enter User ID and Password', 'error');
+                return;
+            }
+
+            // If masterAdmins is not loaded yet, fetch it on the fly
+            if (!masterAdmins || masterAdmins.length === 0) {
+                showLoading('Checking Supervisor credentials...');
+                try {
+                    const res = await fetch(`${SCRIPT_URL}?action=getWorkerList`).then(r => r.json());
+                    if (res.status === 'success') {
+                        masterWorkerList = res.data || {};
+                        masterAdmins = res.admins || [];
+                        populateDepartmentDropdown();
+                    }
+                } catch(e) {}
+                hideLoading();
+            }
+
+            const admin = masterAdmins.find(a => (a.name || a.id || '').trim().toLowerCase() === id.toLowerCase() && String(a.password).trim() === String(pw).trim());
             if (admin) {
                 isAdmin = true;
                 currentAdminUser = admin;
