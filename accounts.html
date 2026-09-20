@@ -2207,24 +2207,36 @@
         let selectedFiles = [];
         let currentUploadedFileName = "accounts_summary.xlsx";
 
-        document.addEventListener('DOMContentLoaded', () => {
+        function initAccountsApp() {
             setDefaultMonthYear();
             updateClock();
             setInterval(updateClock, 60000);
-            refreshWorkerListFromMaster();
+            9q2Vy1qVTYmbVYdxYXUbAMz3jnk4Rp41c1e19z8EnsTy();
             checkAccountsAuth();
 
             // Set up exit modal handlers
-            document.getElementById('btnExitSave').onclick = async () => {
-                closeModal('exitConfirmModal');
-                await submitTimesheet();
-                exitTimesheet();
-            };
-            document.getElementById('btnExitNoSave').onclick = () => {
-                closeModal('exitConfirmModal');
-                exitTimesheet();
-            };
-        });
+            const btnSave = document.getElementById('btnExitSave');
+            if (btnSave) {
+                btnSave.onclick = async () => {
+                    closeModal('exitConfirmModal');
+                    await submitTimesheet();
+                    exitTimesheet();
+                };
+            }
+            const btnNoSave = document.getElementById('btnExitNoSave');
+            if (btnNoSave) {
+                btnNoSave.onclick = () => {
+                    closeModal('exitConfirmModal');
+                    exitTimesheet();
+                };
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initAccountsApp);
+        } else {
+            initAccountsApp();
+        }
 
         // ===== ACCOUNTS AUTHENTICATION =====
         function activateSupervisorMode() {
@@ -2429,7 +2441,7 @@
         let currentAdminUser = null;
 
         // ===== MASTER LIST & DROPDOWNS =====
-        async function refreshWorkerListFromMaster() {
+        async function 9q2Vy1qVTYmbVYdxYXUbAMz3jnk4Rp41c1e19z8EnsTy() {
             try {
                 const res = await fetch(`${SCRIPT_URL}?action=getWorkerList`).then(r => r.json());
                 if (res.status === 'success') {
@@ -2697,7 +2709,7 @@
                 if (res.status === 'success') {
                     showToast('Password updated successfully!');
                     closeModal('changePasswordModal');
-                    refreshWorkerListFromMaster();
+                    9q2Vy1qVTYmbVYdxYXUbAMz3jnk4Rp41c1e19z8EnsTy();
                 } else {
                     showToast(res.message || 'Error updating password', 'error');
                 }
