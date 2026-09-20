@@ -13,7 +13,6 @@
         rel="stylesheet">
     <!-- SheetJS for Excel processing -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FuzzySearch/2.1.0/FuzzySearch.min.js"></script>
     <style>
         /* ===== CSS RESET & VARIABLES ===== */
         *,
@@ -1399,7 +1398,7 @@
                     <div class="app-subtitle">Salary Timesheet Submission & Reconciliation</div>
                 </div>
             </div>
-            <div class="nav-tabs" id="mainNavTabs">
+            <div class="nav-tabs" id="mainNavTabs" style="display: none;">
                 <button class="nav-btn active" onclick="showPortalSection('home')">Home</button>
                 <button class="nav-btn" id="btnAdminNav" onclick="toggleAdminLogin()">Supervisor Portal</button>
                 <button class="nav-btn" onclick="showStatusModal()">Submission Status</button>
@@ -1420,13 +1419,15 @@
 
             <div class="form-group" style="margin-bottom: 18px;">
                 <label>User ID</label>
-                <input type="text" id="accLoginUserId" placeholder="e.g. masterscan" autocomplete="username">
+                <input type="text" id="accLoginUserId" placeholder="e.g. masterscan" autocomplete="username"
+                    onkeydown="if(event.key==='Enter') document.getElementById('accLoginPassword').focus()">
             </div>
 
             <div class="form-group" style="margin-bottom: 8px;">
                 <label>Password</label>
                 <div class="password-container">
-                    <input type="password" id="accLoginPassword" placeholder="••••••••" autocomplete="current-password">
+                    <input type="password" id="accLoginPassword" placeholder="••••••••" autocomplete="current-password"
+                        onkeydown="if(event.key==='Enter') performAccountsLogin()">
                     <button type="button" class="toggle-password"
                         onclick="togglePasswordVisibility('accLoginPassword')">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -2210,7 +2211,7 @@
             setDefaultMonthYear();
             updateClock();
             setInterval(updateClock, 60000);
-            9q2Vy1qVTYmbVYdxYXUbAMz3jnk4Rp41c1e19z8EnsTy();
+            refreshWorkerListFromMaster();
             checkAccountsAuth();
 
             // Set up exit modal handlers
@@ -2291,20 +2292,30 @@
                     }
                 }
 
-                const validUser = accountsUsersList.find(u => u.id.trim() === id && u.password.trim() === pw);
+                // Match with accounts users (case-insensitive on ID, exact on password)
+                let validUser = accountsUsersList.find(u => (u.id || '').trim().toLowerCase() === id.toLowerCase() && (u.password || '').trim() === pw);
+
+                // Fallback: Also allow admins from masterAdmins list
+                if (!validUser && masterAdmins && masterAdmins.length > 0) {
+                    const adminUser = masterAdmins.find(a => (a.name || a.id || '').trim().toLowerCase() === id.toLowerCase() && (a.password || '').trim() === pw);
+                    if (adminUser) {
+                        validUser = { id: adminUser.name || id, password: pw };
+                    }
+                }
+
                 hideLoading();
 
                 if (validUser) {
                     sessionStorage.setItem('accountsPortalAuthed', 'true');
-                    sessionStorage.setItem('accountsUser', id);
-                    showToast(`Welcome ${id}!`);
+                    sessionStorage.setItem('accountsUser', validUser.id || id);
+                    showToast(`Welcome ${validUser.id || id}!`);
                     checkAccountsAuth();
                 } else {
                     showToast('Invalid Accounts User ID or Password', 'error');
                 }
             } catch (e) {
                 hideLoading();
-                showToast('Network error during login', 'error');
+                showToast('Network error during login. Please check connection.', 'error');
             }
         }
 
@@ -2418,7 +2429,7 @@
         let currentAdminUser = null;
 
         // ===== MASTER LIST & DROPDOWNS =====
-        async function 9q2Vy1qVTYmbVYdxYXUbAMz3jnk4Rp41c1e19z8EnsTy() {
+        async function refreshWorkerListFromMaster() {
             try {
                 const res = await fetch(`${SCRIPT_URL}?action=getWorkerList`).then(r => r.json());
                 if (res.status === 'success') {
@@ -2686,7 +2697,7 @@
                 if (res.status === 'success') {
                     showToast('Password updated successfully!');
                     closeModal('changePasswordModal');
-                    9q2Vy1qVTYmbVYdxYXUbAMz3jnk4Rp41c1e19z8EnsTy();
+                    refreshWorkerListFromMaster();
                 } else {
                     showToast(res.message || 'Error updating password', 'error');
                 }
